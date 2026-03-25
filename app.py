@@ -130,65 +130,82 @@ def _truncate(s: str, n: int) -> str:
 
 
 _PLATFORM_COLORS = {
-    "Amazon": ("#ff9900", "#232f3e"),
-    "Walmart": ("#0071dc", "#004c91"),
-    "Target": ("#cc0000", "#990000"),
-    "Best Buy": ("#0046be", "#001e73"),
-    "eBay": ("#e53238", "#86b817"),
-    "Costco": ("#e31837", "#005daa"),
-    "Newegg": ("#f36c21", "#333"),
-    "The Home Depot": ("#f96302", "#333"),
-    "Lowe's": ("#004990", "#002f5f"),
+    "Amazon": "#ff9900",
+    "Walmart": "#0071dc",
+    "Target": "#cc0000",
+    "Best Buy": "#0046be",
+    "eBay": "#e53238",
+    "Costco": "#e31837",
+    "Newegg": "#f36c21",
+    "The Home Depot": "#f96302",
+    "Lowe's": "#004990",
 }
+
+_PLACEHOLDER_IMG = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'"
+    " fill='none'%3E%3Crect width='400' height='300' rx='16' fill='%23101828'/%3E"
+    "%3Ctext x='50%25' y='48%25' text-anchor='middle' fill='%234a5578' font-size='42'"
+    " font-family='system-ui'%3E%F0%9F%93%A6%3C/text%3E"
+    "%3Ctext x='50%25' y='62%25' text-anchor='middle' fill='%233a4560' font-size='14'"
+    " font-family='system-ui'%3ENo image available%3C/text%3E%3C/svg%3E"
+)
 
 
 def _inject_tech_css() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-        @keyframes bg-shift{
-            0%{background-position:0% 50%}
-            50%{background-position:100% 50%}
+        @keyframes aurora{
+            0%  {background-position:0% 50%}
+            50% {background-position:100% 50%}
             100%{background-position:0% 50%}
         }
-        @keyframes scanline{
-            0%{top:-100%}
-            100%{top:200%}
+        @keyframes float-orb{
+            0%,100%{transform:translate(0,0) scale(1)}
+            33%{transform:translate(30px,-20px) scale(1.08)}
+            66%{transform:translate(-20px,15px) scale(0.95)}
         }
-        @keyframes pulse-glow{
-            0%,100%{box-shadow:0 0 8px rgba(0,200,255,0.25), inset 0 0 8px rgba(0,200,255,0.05)}
-            50%{box-shadow:0 0 20px rgba(0,200,255,0.45), inset 0 0 14px rgba(0,200,255,0.08)}
+        @keyframes shimmer{
+            0%{background-position:-200% 0}
+            100%{background-position:200% 0}
         }
-        @keyframes neon-flicker{
-            0%,19%,21%,23%,25%,54%,56%,100%{text-shadow:0 0 7px rgba(0,220,255,0.7), 0 0 20px rgba(0,180,255,0.4)}
-            20%,24%,55%{text-shadow:none}
+        @keyframes breathe{
+            0%,100%{opacity:0.6}
+            50%{opacity:1}
         }
 
-        /* ── Base ── */
+        /* ── Base: deep space + aurora wash ── */
         html, body, [data-testid="stAppViewContainer"]{
-            background: linear-gradient(135deg, #020b18 0%, #041428 25%, #030d1f 50%, #061830 75%, #020b18 100%);
-            background-size: 400% 400%;
-            animation: bg-shift 20s ease infinite;
-            color: #d0eaff;
-            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(ellipse 900px 600px at 15% 20%, rgba(120,80,220,0.18), transparent),
+                radial-gradient(ellipse 700px 500px at 75% 15%, rgba(0,180,255,0.13), transparent),
+                radial-gradient(ellipse 600px 400px at 50% 80%, rgba(200,80,180,0.10), transparent),
+                radial-gradient(ellipse 500px 500px at 90% 70%, rgba(0,220,200,0.08), transparent),
+                linear-gradient(160deg, #06080f 0%, #0a0e1a 30%, #080c18 60%, #050810 100%);
+            background-size: 200% 200%;
+            animation: aurora 25s ease infinite;
+            color: #d8e4f0;
+            font-family: 'Inter', -apple-system, sans-serif;
         }
         [data-testid="stHeader"]{background:transparent !important}
-        [data-testid="stSidebar"]{background:rgba(3,12,28,0.92) !important; backdrop-filter:blur(12px)}
 
-        /* ── Grid overlay ── */
-        [data-testid="stAppViewContainer"]::before{
-            content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-            background:
-                repeating-linear-gradient(90deg, rgba(0,180,255,0.04) 0px, rgba(0,180,255,0.04) 1px, transparent 1px, transparent 80px),
-                repeating-linear-gradient(0deg, rgba(0,180,255,0.03) 0px, rgba(0,180,255,0.03) 1px, transparent 1px, transparent 80px);
-        }
-        /* ── Scanline ── */
+        /* ── Floating orbs (decorative) ── */
+        [data-testid="stAppViewContainer"]::before,
         [data-testid="stAppViewContainer"]::after{
-            content:'';position:fixed;left:0;width:100%;height:120px;pointer-events:none;z-index:0;
-            background:linear-gradient(180deg, transparent, rgba(0,200,255,0.04) 40%, rgba(0,200,255,0.07) 50%, rgba(0,200,255,0.04) 60%, transparent);
-            animation:scanline 8s linear infinite;
+            content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+            filter:blur(80px);
+        }
+        [data-testid="stAppViewContainer"]::before{
+            width:500px;height:500px;top:-80px;left:-100px;
+            background:radial-gradient(circle, rgba(100,60,220,0.22), transparent 70%);
+            animation:float-orb 18s ease-in-out infinite;
+        }
+        [data-testid="stAppViewContainer"]::after{
+            width:420px;height:420px;bottom:-60px;right:-80px;
+            background:radial-gradient(circle, rgba(0,200,240,0.16), transparent 70%);
+            animation:float-orb 22s ease-in-out infinite reverse;
         }
         [data-testid="stAppViewContainer"] > *{position:relative;z-index:1}
 
@@ -196,103 +213,143 @@ def _inject_tech_css() -> None:
         [data-testid="stAppViewContainer"] h1{
             font-family:'Inter',sans-serif !important;
             font-weight:700 !important;
-            background: linear-gradient(90deg, #00d4ff 0%, #0090ff 40%, #00d4ff 80%, #80eaff 100%);
-            background-size:200% auto;
+            font-size:2.6rem !important;
+            background:linear-gradient(135deg, #a78bfa 0%, #60a5fa 30%, #34d399 60%, #a78bfa 100%);
+            background-size:300% auto;
             -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-            animation:bg-shift 6s linear infinite;
+            animation:aurora 8s linear infinite;
             letter-spacing:-0.5px;
+            text-align:center;
+        }
+
+        /* ── Subtitle ── */
+        .subtitle{
+            text-align:center;
+            font-size:0.88rem;font-weight:400;
+            letter-spacing:3px;
+            color:rgba(168,162,220,0.55);
+            font-family:'JetBrains Mono',monospace;
+            margin:-4px 0 28px;
         }
 
         /* ── Search input ── */
         textarea, [data-testid="stTextArea"] textarea{
-            background:rgba(0,20,50,0.65) !important;
-            border:1px solid rgba(0,180,255,0.25) !important;
-            border-radius:12px !important;
-            color:#d8f0ff !important;
+            background:rgba(14,18,36,0.70) !important;
+            border:1px solid rgba(140,120,220,0.20) !important;
+            border-radius:14px !important;
+            color:#d0dce8 !important;
             font-family:'Inter',sans-serif !important;
-            backdrop-filter:blur(6px);
+            font-size:0.95rem !important;
+            backdrop-filter:blur(12px);
             transition:border-color .3s, box-shadow .3s;
         }
         textarea:focus, [data-testid="stTextArea"] textarea:focus{
-            border-color:rgba(0,200,255,0.65) !important;
-            box-shadow:0 0 16px rgba(0,200,255,0.15) !important;
+            border-color:rgba(140,120,255,0.50) !important;
+            box-shadow:0 0 24px rgba(120,80,220,0.12), 0 0 8px rgba(0,180,255,0.08) !important;
         }
 
         /* ── Search button ── */
         .stButton>button{
-            background:linear-gradient(135deg, rgba(0,100,220,0.25), rgba(0,180,255,0.15)) !important;
-            border:1px solid rgba(0,200,255,0.4) !important;
-            border-radius:12px !important;
-            color:#c8f0ff !important;
+            background:linear-gradient(135deg, rgba(100,60,220,0.30), rgba(0,160,240,0.20)) !important;
+            border:1px solid rgba(140,120,255,0.30) !important;
+            border-radius:14px !important;
+            color:#d4d0f8 !important;
             font-weight:600 !important;
             font-family:'Inter',sans-serif !important;
-            padding:0.6rem 2.4rem !important;
-            letter-spacing:0.5px;
-            transition:all .3s ease;
-            animation:pulse-glow 3s ease-in-out infinite;
+            font-size:0.95rem !important;
+            padding:0.65rem 2.8rem !important;
+            letter-spacing:0.8px;
+            transition:all .35s cubic-bezier(.4,0,.2,1);
         }
         .stButton>button:hover{
-            background:linear-gradient(135deg, rgba(0,120,240,0.4), rgba(0,200,255,0.3)) !important;
-            border-color:rgba(0,230,255,0.8) !important;
-            box-shadow:0 0 28px rgba(0,200,255,0.35) !important;
-            transform:translateY(-1px);
+            background:linear-gradient(135deg, rgba(120,80,240,0.45), rgba(0,180,255,0.30)) !important;
+            border-color:rgba(160,140,255,0.60) !important;
+            box-shadow:0 0 32px rgba(120,80,220,0.20), 0 4px 16px rgba(0,0,0,0.3) !important;
+            transform:translateY(-2px);
         }
 
-        /* ── Cards (st.container with border) ── */
-        [data-testid="stVerticalBlockBorderWrapper"]{
-            background:rgba(4,18,42,0.55) !important;
-            backdrop-filter:blur(14px) saturate(1.4) !important;
-            border:1px solid rgba(0,180,255,0.18) !important;
-            border-radius:16px !important;
-            box-shadow:0 4px 30px rgba(0,0,0,0.4), 0 0 1px rgba(0,180,255,0.3) !important;
+        /* ── Product card ── */
+        .product-card{
+            background:rgba(12,16,32,0.55);
+            backdrop-filter:blur(20px) saturate(1.5);
+            border:1px solid rgba(120,100,200,0.14);
+            border-radius:20px;
             overflow:hidden;
-            transition:border-color .35s, box-shadow .35s, transform .25s;
+            transition:border-color .4s, box-shadow .4s, transform .3s;
+            margin-bottom:4px;
         }
-        [data-testid="stVerticalBlockBorderWrapper"]:hover{
-            border-color:rgba(0,200,255,0.45) !important;
-            box-shadow:0 8px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,200,255,0.12) !important;
-            transform:translateY(-3px);
+        .product-card:hover{
+            border-color:rgba(140,120,255,0.35);
+            box-shadow:
+                0 12px 48px rgba(0,0,0,0.45),
+                0 0 30px rgba(120,80,220,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+            transform:translateY(-4px);
         }
 
-        /* ── Subheader inside cards ── */
-        [data-testid="stVerticalBlockBorderWrapper"] h3,
-        [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSubheader"]{
-            font-family:'Inter',sans-serif !important;
-            font-weight:600 !important;
-            color:#e0f4ff !important;
-            font-size:1.05rem !important;
-            border-bottom:1px solid rgba(0,180,255,0.12);
-            padding-bottom:8px;
-            margin-bottom:8px;
+        /* ── Card image ── */
+        .card-img-wrap{
+            position:relative;
+            background:linear-gradient(135deg, rgba(10,14,28,0.9), rgba(16,20,40,0.9));
+            display:flex;align-items:center;justify-content:center;
+            min-height:200px;max-height:280px;
+            overflow:hidden;
+        }
+        .card-img-wrap::after{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(180deg, transparent 60%, rgba(12,16,32,0.95) 100%);
+            pointer-events:none;
+        }
+        .card-img-wrap img{
+            width:100%;height:100%;
+            object-fit:contain;
+            max-height:280px;
+            padding:12px;
+            transition:transform .4s cubic-bezier(.4,0,.2,1);
+        }
+        .product-card:hover .card-img-wrap img{
+            transform:scale(1.05);
+        }
+
+        /* ── Card body ── */
+        .card-body{padding:18px 20px 20px;}
+
+        .card-title{
+            font-family:'Inter',sans-serif;
+            font-weight:600;font-size:1.02rem;
+            color:#e8edf4;
+            line-height:1.4;
+            margin:0 0 10px;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
         }
 
         /* ── Badges ── */
-        .badgebar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;align-items:center}
+        .badgebar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
         .badge{
-            display:inline-flex;align-items:center;gap:5px;
-            padding:5px 14px;
-            border-radius:999px;
-            font-size:0.82rem;font-weight:500;
+            display:inline-flex;align-items:center;gap:4px;
+            padding:4px 12px;
+            border-radius:8px;
+            font-size:0.78rem;font-weight:500;
             font-family:'Inter',sans-serif;
-            line-height:1.3;
+            line-height:1.2;
             backdrop-filter:blur(4px);
-            transition:transform .2s, box-shadow .2s;
+            transition:transform .2s;
         }
-        .badge:hover{transform:scale(1.04);box-shadow:0 0 10px rgba(0,180,255,0.2)}
+        .badge:hover{transform:translateY(-1px)}
         .badge-platform{
-            background:rgba(0,140,255,0.15);
-            border:1px solid rgba(0,180,255,0.35);
-            color:#b8e8ff;
+            background:rgba(100,80,200,0.15);
+            border:1px solid rgba(140,120,255,0.25);
+            color:#c4b8f0;
         }
         .badge-seller{
-            background:rgba(0,255,200,0.08);
-            border:1px solid rgba(0,255,180,0.25);
-            color:#a8f0d8;
+            background:rgba(0,200,180,0.08);
+            border:1px solid rgba(0,200,180,0.20);
+            color:#90e0d0;
         }
         .badge-brand{
-            background:rgba(180,120,255,0.10);
-            border:1px solid rgba(180,140,255,0.30);
-            color:#d4c0ff;
+            background:rgba(200,140,255,0.08);
+            border:1px solid rgba(200,160,255,0.20);
+            color:#d0b8f0;
         }
         .badge-custom{
             border:1px solid;
@@ -300,75 +357,68 @@ def _inject_tech_css() -> None:
         }
 
         /* ── Price ── */
+        .price-row{display:flex;align-items:baseline;gap:8px;margin:0 0 14px}
         .price-tag{
             font-family:'JetBrains Mono','Inter',monospace;
-            font-size:1.35rem;font-weight:700;
-            color:#00e8ff;
-            text-shadow:0 0 12px rgba(0,220,255,0.35);
-            margin:6px 0 4px;
-            letter-spacing:0.5px;
+            font-size:1.4rem;font-weight:700;
+            background:linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
         }
         .price-unavailable{
-            font-size:0.88rem;color:rgba(180,200,220,0.5);
-            font-style:italic;margin:6px 0 4px;
-        }
-
-        /* ── Image container ── */
-        .img-wrap{
-            border-radius:10px;overflow:hidden;
-            border:1px solid rgba(0,180,255,0.12);
-            margin-bottom:10px;
-            background:rgba(0,10,30,0.4);
-        }
-        .img-wrap img{
-            width:100%;height:auto;
-            object-fit:contain;
-            max-height:260px;
+            font-size:0.82rem;
+            color:rgba(160,170,190,0.40);
+            font-style:italic;
         }
 
         /* ── Link button ── */
         .link-btn{
-            display:inline-block;
-            background:linear-gradient(135deg, rgba(0,100,220,0.20), rgba(0,180,255,0.10));
-            border:1px solid rgba(0,200,255,0.30);
-            border-radius:8px;
-            padding:6px 16px;
-            color:#b0e4ff !important;
-            font-size:0.85rem;font-weight:500;
+            display:inline-flex;align-items:center;gap:6px;
+            background:linear-gradient(135deg, rgba(100,60,220,0.18), rgba(0,160,240,0.12));
+            border:1px solid rgba(140,120,255,0.22);
+            border-radius:10px;
+            padding:8px 20px;
+            color:#b8b0e8 !important;
+            font-size:0.84rem;font-weight:500;
             text-decoration:none !important;
             font-family:'Inter',sans-serif;
-            transition:all .25s;
+            transition:all .3s cubic-bezier(.4,0,.2,1);
         }
         .link-btn:hover{
-            background:linear-gradient(135deg, rgba(0,120,240,0.35), rgba(0,200,255,0.22));
-            border-color:rgba(0,230,255,0.7);
-            box-shadow:0 0 14px rgba(0,200,255,0.18);
-            color:#e0f8ff !important;
+            background:linear-gradient(135deg, rgba(120,80,240,0.30), rgba(0,180,255,0.20));
+            border-color:rgba(160,140,255,0.50);
+            box-shadow:0 0 20px rgba(120,80,220,0.14);
+            color:#e0d8ff !important;
+            transform:translateY(-1px);
         }
+        .link-btn svg{width:14px;height:14px;fill:currentColor;opacity:0.7}
 
         /* ── Expander ── */
         [data-testid="stExpander"]{
-            border:1px solid rgba(0,160,255,0.12) !important;
-            border-radius:10px !important;
-            background:rgba(0,15,40,0.3) !important;
+            border:1px solid rgba(120,100,200,0.10) !important;
+            border-radius:12px !important;
+            background:rgba(10,14,28,0.35) !important;
         }
         [data-testid="stExpander"] summary{
             font-family:'Inter',sans-serif !important;
             font-weight:500 !important;
-            color:#90d0ff !important;
+            color:rgba(168,160,220,0.70) !important;
+            font-size:0.88rem !important;
         }
-
-        /* ── Spinner ── */
-        [data-testid="stSpinner"]{color:#00c8ff !important}
 
         /* ── Result count ── */
         .result-count{
             text-align:center;
-            font-size:0.92rem;
-            color:rgba(0,200,255,0.55);
-            margin:8px 0 18px;
-            letter-spacing:1px;
-            font-family:'JetBrains Mono','Inter',monospace;
+            font-size:0.82rem;
+            color:rgba(140,130,200,0.45);
+            margin:12px 0 22px;
+            letter-spacing:2px;
+            font-family:'JetBrains Mono',monospace;
+        }
+
+        /* ── Divider line ── */
+        .divider{
+            height:1px;margin:14px 0;
+            background:linear-gradient(90deg, transparent, rgba(140,120,220,0.15), transparent);
         }
         </style>
         """,
@@ -377,78 +427,75 @@ def _inject_tech_css() -> None:
 
 
 def _platform_badge_html(platform: str) -> str:
-    colors = _PLATFORM_COLORS.get(platform)
-    if colors:
-        fg, _ = colors
+    color = _PLATFORM_COLORS.get(platform)
+    if color:
         return (
             f"<span class='badge badge-custom' "
-            f"style='color:{fg};border-color:{fg};background:rgba(255,255,255,0.04)'>"
+            f"style='color:{color};border-color:{color}40;background:{color}12'>"
             f"{platform}</span>"
         )
     return f"<span class='badge badge-platform'>{platform}</span>"
 
 
-def _render_card(r: dict, idx: int) -> None:
-    name = r.get("name") or "Unknown product"
-    image_url = (r.get("image_url") or "").strip()
+def _render_card_html(r: dict, idx: int) -> str:
+    name = _truncate(r.get("name") or "Unknown product", 80)
+    image_url = (r.get("image_url") or "").strip() or _PLACEHOLDER_IMG
     platform_text = (r.get("platform") or "").strip() or "Unknown"
     seller_text = (r.get("seller") or "").strip()
+    price_raw = r.get("price") or ""
+    url = r.get("url") or ""
+
     brand_text = ""
     for reason in r.get("reasons", []):
         if "brand:" in reason.lower():
             brand_text = reason.split(":")[-1].strip().rstrip(".")
             break
-    price_raw = r.get("price") or ""
-    url = r.get("url") or ""
 
-    st.subheader(f"{idx}. {_truncate(name, 68)}")
-
-    if image_url:
-        st.markdown(
-            f'<div class="img-wrap"><img src="{image_url}" alt="product"></div>',
-            unsafe_allow_html=True,
-        )
-
-    badges = _platform_badge_html(platform_text)
+    badges_html = _platform_badge_html(platform_text)
     if seller_text:
-        badges += f"<span class='badge badge-seller'>{_truncate(seller_text, 30)}</span>"
+        badges_html += f"<span class='badge badge-seller'>{_truncate(seller_text, 28)}</span>"
     if brand_text:
-        badges += f"<span class='badge badge-brand'>{_truncate(brand_text, 26)}</span>"
-    st.markdown(f'<div class="badgebar">{badges}</div>', unsafe_allow_html=True)
+        badges_html += f"<span class='badge badge-brand'>{_truncate(brand_text, 24)}</span>"
 
     if price_raw and "unavailable" not in price_raw.lower():
-        st.markdown(f'<div class="price-tag">{price_raw}</div>', unsafe_allow_html=True)
+        price_html = f'<span class="price-tag">{price_raw}</span>'
     else:
-        st.markdown('<div class="price-unavailable">Price unavailable</div>', unsafe_allow_html=True)
+        price_html = '<span class="price-unavailable">Price unavailable</span>'
 
-    if url:
-        st.markdown(
-            f'<a class="link-btn" href="{url}" target="_blank" rel="noopener">'
-            f'View on {platform_text} &rarr;</a>',
-            unsafe_allow_html=True,
-        )
+    arrow_svg = (
+        '<svg viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 '
+        '101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>'
+        '<path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 '
+        '10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>'
+    )
+    link_html = (
+        f'<a class="link-btn" href="{url}" target="_blank" rel="noopener">'
+        f'View on {platform_text} {arrow_svg}</a>'
+    ) if url else ""
 
-    with st.expander("Details & evidence", expanded=False):
-        for reason in r.get("reasons", []):
-            st.write(f"- {reason}")
-        if r.get("evidence"):
-            st.markdown("---")
-            for field, value in r.get("evidence", []):
-                st.code(f"{field}: {str(value)[:120]}", language=None)
+    return f"""
+    <div class="product-card">
+      <div class="card-img-wrap">
+        <img src="{image_url}" alt="{_truncate(name, 40)}" loading="lazy"
+             onerror="this.src='{_PLACEHOLDER_IMG}'">
+      </div>
+      <div class="card-body">
+        <div class="card-title">{idx}. {name}</div>
+        <div class="badgebar">{badges_html}</div>
+        <div class="price-row">{price_html}</div>
+        {link_html}
+      </div>
+    </div>
+    """
 
 
 def main():
     st.set_page_config(page_title="SKU Check — Smart Product Search", layout="wide")
     _inject_tech_css()
 
+    st.markdown('<h1>SKU Check</h1>', unsafe_allow_html=True)
     st.markdown(
-        '<h1 style="text-align:center;margin-bottom:0">SKU Check</h1>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p style="text-align:center;color:rgba(0,200,255,0.5);font-size:0.92rem;'
-        'letter-spacing:2px;margin-top:2px;font-family:JetBrains Mono,monospace">'
-        'INTELLIGENT PRODUCT DISCOVERY ENGINE</p>',
+        '<p class="subtitle">INTELLIGENT PRODUCT DISCOVERY</p>',
         unsafe_allow_html=True,
     )
 
@@ -478,7 +525,7 @@ def main():
             return
 
         st.markdown(
-            f'<div class="result-count">// {len(results)} PRODUCT{"S" if len(results) != 1 else ""} FOUND //</div>',
+            f'<div class="result-count">{len(results)} PRODUCT{"S" if len(results) != 1 else ""} FOUND</div>',
             unsafe_allow_html=True,
         )
 
@@ -488,9 +535,19 @@ def main():
                 idx = i + col_i
                 if idx >= len(results):
                     continue
+                r = results[idx]
                 with row_cols[col_i]:
-                    with st.container(border=True):
-                        _render_card(results[idx], idx + 1)
+                    st.markdown(
+                        _render_card_html(r, idx + 1),
+                        unsafe_allow_html=True,
+                    )
+                    with st.expander("Details & evidence", expanded=False):
+                        for reason in r.get("reasons", []):
+                            st.write(f"- {reason}")
+                        if r.get("evidence"):
+                            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+                            for fld, val in r.get("evidence", []):
+                                st.code(f"{fld}: {str(val)[:120]}", language=None)
 
 
 if __name__ == "__main__":
