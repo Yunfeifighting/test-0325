@@ -129,50 +129,246 @@ def _truncate(s: str, n: int) -> str:
     return s[: max(0, n - 3)] + "..."
 
 
+_PLATFORM_COLORS = {
+    "Amazon": ("#ff9900", "#232f3e"),
+    "Walmart": ("#0071dc", "#004c91"),
+    "Target": ("#cc0000", "#990000"),
+    "Best Buy": ("#0046be", "#001e73"),
+    "eBay": ("#e53238", "#86b817"),
+    "Costco": ("#e31837", "#005daa"),
+    "Newegg": ("#f36c21", "#333"),
+    "The Home Depot": ("#f96302", "#333"),
+    "Lowe's": ("#004990", "#002f5f"),
+}
+
+
 def _inject_tech_css() -> None:
-    # Background + light UI accents. Keep it subtle for readability.
     st.markdown(
         """
         <style>
-        html, body, [data-testid="stAppViewContainer"] {
-            background: radial-gradient(1200px circle at 20% 10%, rgba(0, 255, 255, 0.12), rgba(0,0,0,0) 45%),
-                        radial-gradient(900px circle at 80% 30%, rgba(0, 140, 255, 0.10), rgba(0,0,0,0) 50%),
-                        linear-gradient(180deg, #04101f 0%, #030915 60%, #03070f 100%);
-            color: #e6f3ff;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        @keyframes bg-shift{
+            0%{background-position:0% 50%}
+            50%{background-position:100% 50%}
+            100%{background-position:0% 50%}
         }
+        @keyframes scanline{
+            0%{top:-100%}
+            100%{top:200%}
+        }
+        @keyframes pulse-glow{
+            0%,100%{box-shadow:0 0 8px rgba(0,200,255,0.25), inset 0 0 8px rgba(0,200,255,0.05)}
+            50%{box-shadow:0 0 20px rgba(0,200,255,0.45), inset 0 0 14px rgba(0,200,255,0.08)}
+        }
+        @keyframes neon-flicker{
+            0%,19%,21%,23%,25%,54%,56%,100%{text-shadow:0 0 7px rgba(0,220,255,0.7), 0 0 20px rgba(0,180,255,0.4)}
+            20%,24%,55%{text-shadow:none}
+        }
+
+        /* ── Base ── */
+        html, body, [data-testid="stAppViewContainer"]{
+            background: linear-gradient(135deg, #020b18 0%, #041428 25%, #030d1f 50%, #061830 75%, #020b18 100%);
+            background-size: 400% 400%;
+            animation: bg-shift 20s ease infinite;
+            color: #d0eaff;
+            font-family: 'Inter', sans-serif;
+        }
+        [data-testid="stHeader"]{background:transparent !important}
+        [data-testid="stSidebar"]{background:rgba(3,12,28,0.92) !important; backdrop-filter:blur(12px)}
+
+        /* ── Grid overlay ── */
         [data-testid="stAppViewContainer"]::before{
-            content:'';
-            position:fixed;
-            inset:0;
+            content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
             background:
-                repeating-linear-gradient(90deg, rgba(0,200,255,0.08) 0px, rgba(0,200,255,0.08) 1px, transparent 1px, transparent 70px),
-                repeating-linear-gradient(0deg, rgba(0,200,255,0.06) 0px, rgba(0,200,255,0.06) 1px, transparent 1px, transparent 70px);
-            opacity:0.18;
-            pointer-events:none;
-            z-index:0;
+                repeating-linear-gradient(90deg, rgba(0,180,255,0.04) 0px, rgba(0,180,255,0.04) 1px, transparent 1px, transparent 80px),
+                repeating-linear-gradient(0deg, rgba(0,180,255,0.03) 0px, rgba(0,180,255,0.03) 1px, transparent 1px, transparent 80px);
         }
-        [data-testid="stAppViewContainer"] > *{
-            position:relative;
-            z-index:1;
+        /* ── Scanline ── */
+        [data-testid="stAppViewContainer"]::after{
+            content:'';position:fixed;left:0;width:100%;height:120px;pointer-events:none;z-index:0;
+            background:linear-gradient(180deg, transparent, rgba(0,200,255,0.04) 40%, rgba(0,200,255,0.07) 50%, rgba(0,200,255,0.04) 60%, transparent);
+            animation:scanline 8s linear infinite;
         }
-        .badgebar{display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px;}
-        .badge{
-            background: rgba(0,160,255,0.12);
-            border: 1px solid rgba(0,200,255,0.35);
-            color:#cfefff;
-            padding:4px 10px;
-            border-radius:999px;
-            font-size:0.85rem;
-            line-height:1.2;
+        [data-testid="stAppViewContainer"] > *{position:relative;z-index:1}
+
+        /* ── Title ── */
+        [data-testid="stAppViewContainer"] h1{
+            font-family:'Inter',sans-serif !important;
+            font-weight:700 !important;
+            background: linear-gradient(90deg, #00d4ff 0%, #0090ff 40%, #00d4ff 80%, #80eaff 100%);
+            background-size:200% auto;
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            animation:bg-shift 6s linear infinite;
+            letter-spacing:-0.5px;
         }
+
+        /* ── Search input ── */
+        textarea, [data-testid="stTextArea"] textarea{
+            background:rgba(0,20,50,0.65) !important;
+            border:1px solid rgba(0,180,255,0.25) !important;
+            border-radius:12px !important;
+            color:#d8f0ff !important;
+            font-family:'Inter',sans-serif !important;
+            backdrop-filter:blur(6px);
+            transition:border-color .3s, box-shadow .3s;
+        }
+        textarea:focus, [data-testid="stTextArea"] textarea:focus{
+            border-color:rgba(0,200,255,0.65) !important;
+            box-shadow:0 0 16px rgba(0,200,255,0.15) !important;
+        }
+
+        /* ── Search button ── */
         .stButton>button{
-            border: 1px solid rgba(0,200,255,0.35);
-            background: rgba(0, 120, 255, 0.10);
-            color:#dff7ff;
+            background:linear-gradient(135deg, rgba(0,100,220,0.25), rgba(0,180,255,0.15)) !important;
+            border:1px solid rgba(0,200,255,0.4) !important;
+            border-radius:12px !important;
+            color:#c8f0ff !important;
+            font-weight:600 !important;
+            font-family:'Inter',sans-serif !important;
+            padding:0.6rem 2.4rem !important;
+            letter-spacing:0.5px;
+            transition:all .3s ease;
+            animation:pulse-glow 3s ease-in-out infinite;
         }
         .stButton>button:hover{
-            border-color: rgba(0,220,255,0.80);
-            background: rgba(0, 120, 255, 0.20);
+            background:linear-gradient(135deg, rgba(0,120,240,0.4), rgba(0,200,255,0.3)) !important;
+            border-color:rgba(0,230,255,0.8) !important;
+            box-shadow:0 0 28px rgba(0,200,255,0.35) !important;
+            transform:translateY(-1px);
+        }
+
+        /* ── Cards (st.container with border) ── */
+        [data-testid="stVerticalBlockBorderWrapper"]{
+            background:rgba(4,18,42,0.55) !important;
+            backdrop-filter:blur(14px) saturate(1.4) !important;
+            border:1px solid rgba(0,180,255,0.18) !important;
+            border-radius:16px !important;
+            box-shadow:0 4px 30px rgba(0,0,0,0.4), 0 0 1px rgba(0,180,255,0.3) !important;
+            overflow:hidden;
+            transition:border-color .35s, box-shadow .35s, transform .25s;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"]:hover{
+            border-color:rgba(0,200,255,0.45) !important;
+            box-shadow:0 8px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,200,255,0.12) !important;
+            transform:translateY(-3px);
+        }
+
+        /* ── Subheader inside cards ── */
+        [data-testid="stVerticalBlockBorderWrapper"] h3,
+        [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSubheader"]{
+            font-family:'Inter',sans-serif !important;
+            font-weight:600 !important;
+            color:#e0f4ff !important;
+            font-size:1.05rem !important;
+            border-bottom:1px solid rgba(0,180,255,0.12);
+            padding-bottom:8px;
+            margin-bottom:8px;
+        }
+
+        /* ── Badges ── */
+        .badgebar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;align-items:center}
+        .badge{
+            display:inline-flex;align-items:center;gap:5px;
+            padding:5px 14px;
+            border-radius:999px;
+            font-size:0.82rem;font-weight:500;
+            font-family:'Inter',sans-serif;
+            line-height:1.3;
+            backdrop-filter:blur(4px);
+            transition:transform .2s, box-shadow .2s;
+        }
+        .badge:hover{transform:scale(1.04);box-shadow:0 0 10px rgba(0,180,255,0.2)}
+        .badge-platform{
+            background:rgba(0,140,255,0.15);
+            border:1px solid rgba(0,180,255,0.35);
+            color:#b8e8ff;
+        }
+        .badge-seller{
+            background:rgba(0,255,200,0.08);
+            border:1px solid rgba(0,255,180,0.25);
+            color:#a8f0d8;
+        }
+        .badge-brand{
+            background:rgba(180,120,255,0.10);
+            border:1px solid rgba(180,140,255,0.30);
+            color:#d4c0ff;
+        }
+        .badge-custom{
+            border:1px solid;
+            font-weight:600;
+        }
+
+        /* ── Price ── */
+        .price-tag{
+            font-family:'JetBrains Mono','Inter',monospace;
+            font-size:1.35rem;font-weight:700;
+            color:#00e8ff;
+            text-shadow:0 0 12px rgba(0,220,255,0.35);
+            margin:6px 0 4px;
+            letter-spacing:0.5px;
+        }
+        .price-unavailable{
+            font-size:0.88rem;color:rgba(180,200,220,0.5);
+            font-style:italic;margin:6px 0 4px;
+        }
+
+        /* ── Image container ── */
+        .img-wrap{
+            border-radius:10px;overflow:hidden;
+            border:1px solid rgba(0,180,255,0.12);
+            margin-bottom:10px;
+            background:rgba(0,10,30,0.4);
+        }
+        .img-wrap img{
+            width:100%;height:auto;
+            object-fit:contain;
+            max-height:260px;
+        }
+
+        /* ── Link button ── */
+        .link-btn{
+            display:inline-block;
+            background:linear-gradient(135deg, rgba(0,100,220,0.20), rgba(0,180,255,0.10));
+            border:1px solid rgba(0,200,255,0.30);
+            border-radius:8px;
+            padding:6px 16px;
+            color:#b0e4ff !important;
+            font-size:0.85rem;font-weight:500;
+            text-decoration:none !important;
+            font-family:'Inter',sans-serif;
+            transition:all .25s;
+        }
+        .link-btn:hover{
+            background:linear-gradient(135deg, rgba(0,120,240,0.35), rgba(0,200,255,0.22));
+            border-color:rgba(0,230,255,0.7);
+            box-shadow:0 0 14px rgba(0,200,255,0.18);
+            color:#e0f8ff !important;
+        }
+
+        /* ── Expander ── */
+        [data-testid="stExpander"]{
+            border:1px solid rgba(0,160,255,0.12) !important;
+            border-radius:10px !important;
+            background:rgba(0,15,40,0.3) !important;
+        }
+        [data-testid="stExpander"] summary{
+            font-family:'Inter',sans-serif !important;
+            font-weight:500 !important;
+            color:#90d0ff !important;
+        }
+
+        /* ── Spinner ── */
+        [data-testid="stSpinner"]{color:#00c8ff !important}
+
+        /* ── Result count ── */
+        .result-count{
+            text-align:center;
+            font-size:0.92rem;
+            color:rgba(0,200,255,0.55);
+            margin:8px 0 18px;
+            letter-spacing:1px;
+            font-family:'JetBrains Mono','Inter',monospace;
         }
         </style>
         """,
@@ -180,80 +376,121 @@ def _inject_tech_css() -> None:
     )
 
 
+def _platform_badge_html(platform: str) -> str:
+    colors = _PLATFORM_COLORS.get(platform)
+    if colors:
+        fg, _ = colors
+        return (
+            f"<span class='badge badge-custom' "
+            f"style='color:{fg};border-color:{fg};background:rgba(255,255,255,0.04)'>"
+            f"{platform}</span>"
+        )
+    return f"<span class='badge badge-platform'>{platform}</span>"
+
+
+def _render_card(r: dict, idx: int) -> None:
+    name = r.get("name") or "Unknown product"
+    image_url = (r.get("image_url") or "").strip()
+    platform_text = (r.get("platform") or "").strip() or "Unknown"
+    seller_text = (r.get("seller") or "").strip()
+    brand_text = ""
+    for reason in r.get("reasons", []):
+        if "brand:" in reason.lower():
+            brand_text = reason.split(":")[-1].strip().rstrip(".")
+            break
+    price_raw = r.get("price") or ""
+    url = r.get("url") or ""
+
+    st.subheader(f"{idx}. {_truncate(name, 68)}")
+
+    if image_url:
+        st.markdown(
+            f'<div class="img-wrap"><img src="{image_url}" alt="product"></div>',
+            unsafe_allow_html=True,
+        )
+
+    badges = _platform_badge_html(platform_text)
+    if seller_text:
+        badges += f"<span class='badge badge-seller'>{_truncate(seller_text, 30)}</span>"
+    if brand_text:
+        badges += f"<span class='badge badge-brand'>{_truncate(brand_text, 26)}</span>"
+    st.markdown(f'<div class="badgebar">{badges}</div>', unsafe_allow_html=True)
+
+    if price_raw and "unavailable" not in price_raw.lower():
+        st.markdown(f'<div class="price-tag">{price_raw}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="price-unavailable">Price unavailable</div>', unsafe_allow_html=True)
+
+    if url:
+        st.markdown(
+            f'<a class="link-btn" href="{url}" target="_blank" rel="noopener">'
+            f'View on {platform_text} &rarr;</a>',
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("Details & evidence", expanded=False):
+        for reason in r.get("reasons", []):
+            st.write(f"- {reason}")
+        if r.get("evidence"):
+            st.markdown("---")
+            for field, value in r.get("evidence", []):
+                st.code(f"{field}: {str(value)[:120]}", language=None)
+
+
 def main():
-    st.set_page_config(page_title="US Product Search & Recommendations", layout="wide")
+    st.set_page_config(page_title="SKU Check — Smart Product Search", layout="wide")
     _inject_tech_css()
-    st.title("US Product Search & Recommendations")
-    st.caption("Enter your needs in natural language. Results are limited to US-oriented sources and USD pricing when available.")
+
+    st.markdown(
+        '<h1 style="text-align:center;margin-bottom:0">SKU Check</h1>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p style="text-align:center;color:rgba(0,200,255,0.5);font-size:0.92rem;'
+        'letter-spacing:2px;margin-top:2px;font-family:JetBrains Mono,monospace">'
+        'INTELLIGENT PRODUCT DISCOVERY ENGINE</p>',
+        unsafe_allow_html=True,
+    )
 
     user_input = st.text_area(
-        "Describe what you are looking for (e.g., budget, use case, preferences):",
+        "Describe what you are looking for:",
         height=100,
         placeholder="e.g., Wireless headphones under $100 for running, noise cancellation preferred",
     )
 
-    if st.button("Search"):
+    col_left, col_center, col_right = st.columns([1, 1, 1])
+    with col_center:
+        search_clicked = st.button("Search", use_container_width=True)
+
+    if search_clicked:
         if not (user_input or "").strip():
             st.warning("Please enter a description of what you want.")
             return
-        with st.spinner("Searching and analyzing products..."):
+        with st.spinner("Scanning product sources..."):
             results = run_pipeline(user_input.strip())
         if not results:
             intent = extract_intent(user_input.strip())
             results = get_demo_results(user_input.strip(), intent.keywords)
             if results:
-                st.info("Direct search returned no results. Showing recommended retailers to search—click to view products.")
+                st.info("Direct search returned no results. Showing recommended retailers.")
         if not results:
             st.warning("No results available. Check your network connection and try again.")
             return
 
-        # 2-column grid cards
+        st.markdown(
+            f'<div class="result-count">// {len(results)} PRODUCT{"S" if len(results) != 1 else ""} FOUND //</div>',
+            unsafe_allow_html=True,
+        )
+
         for i in range(0, len(results), 2):
             row_cols = st.columns(2)
             for col_i in range(2):
                 idx = i + col_i
                 if idx >= len(results):
                     continue
-                r = results[idx]
-
                 with row_cols[col_i]:
                     with st.container(border=True):
-                        name = r.get("name") or "Unknown product"
-                        st.subheader(f"{idx + 1}. {_truncate(name, 72)}")
-
-                        image_url = r.get("image_url") or ""
-                        if image_url:
-                            st.image(image_url, use_container_width=True)
-
-                        platform_text = (r.get("platform") or "").strip() or "Unknown platform"
-                        seller_text = (r.get("seller") or "").strip() or ""
-                        seller_badge = f"<span class='badge'>Seller: {seller_text}</span>" if seller_text else ""
-
-                        st.markdown(
-                            f"""
-                            <div class="badgebar">
-                              <span class='badge'>Platform: {platform_text}</span>
-                              {seller_badge}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-                        if r.get("price"):
-                            st.write(f"**Price:** {r['price']}")
-
-                        url = r.get("url") or ""
-                        if url:
-                            st.markdown(f"**Link:** [{_truncate(url, 52)}]({url})")
-
-                        with st.expander("Details (reasons & evidence)", expanded=False):
-                            st.markdown("**Recommendation reasons:**")
-                            for reason in r.get("reasons", []):
-                                st.write(f"- {reason}")
-
-                            with st.expander("Evidence (traceable fields)", expanded=False):
-                                for field, value in r.get("evidence", []):
-                                    st.code(f"{field}: {str(value)[:120]}", language=None)
+                        _render_card(results[idx], idx + 1)
 
 
 if __name__ == "__main__":
