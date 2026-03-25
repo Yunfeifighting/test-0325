@@ -122,8 +122,67 @@ def run_pipeline(user_input: str) -> list[dict]:
     return results
 
 
+def _truncate(s: str, n: int) -> str:
+    s = s or ""
+    if len(s) <= n:
+        return s
+    return s[: max(0, n - 3)] + "..."
+
+
+def _inject_tech_css() -> None:
+    # Background + light UI accents. Keep it subtle for readability.
+    st.markdown(
+        """
+        <style>
+        html, body, [data-testid="stAppViewContainer"] {
+            background: radial-gradient(1200px circle at 20% 10%, rgba(0, 255, 255, 0.12), rgba(0,0,0,0) 45%),
+                        radial-gradient(900px circle at 80% 30%, rgba(0, 140, 255, 0.10), rgba(0,0,0,0) 50%),
+                        linear-gradient(180deg, #04101f 0%, #030915 60%, #03070f 100%);
+            color: #e6f3ff;
+        }
+        [data-testid="stAppViewContainer"]::before{
+            content:'';
+            position:fixed;
+            inset:0;
+            background:
+                repeating-linear-gradient(90deg, rgba(0,200,255,0.08) 0px, rgba(0,200,255,0.08) 1px, transparent 1px, transparent 70px),
+                repeating-linear-gradient(0deg, rgba(0,200,255,0.06) 0px, rgba(0,200,255,0.06) 1px, transparent 1px, transparent 70px);
+            opacity:0.18;
+            pointer-events:none;
+            z-index:0;
+        }
+        [data-testid="stAppViewContainer"] > *{
+            position:relative;
+            z-index:1;
+        }
+        .badgebar{display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px;}
+        .badge{
+            background: rgba(0,160,255,0.12);
+            border: 1px solid rgba(0,200,255,0.35);
+            color:#cfefff;
+            padding:4px 10px;
+            border-radius:999px;
+            font-size:0.85rem;
+            line-height:1.2;
+        }
+        .stButton>button{
+            border: 1px solid rgba(0,200,255,0.35);
+            background: rgba(0, 120, 255, 0.10);
+            color:#dff7ff;
+        }
+        .stButton>button:hover{
+            border-color: rgba(0,220,255,0.80);
+            background: rgba(0, 120, 255, 0.20);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main():
     st.set_page_config(page_title="US Product Search & Recommendations", layout="wide")
+    _inject_tech_css()
     st.title("US Product Search & Recommendations")
     st.caption("Enter your needs in natural language. Results are limited to US-oriented sources and USD pricing when available.")
 
@@ -147,23 +206,54 @@ def main():
         if not results:
             st.warning("No results available. Check your network connection and try again.")
             return
-        for i, r in enumerate(results, 1):
-            with st.expander(f"**{i}. {r['name'][:80]}{'...' if len(r['name']) > 80 else ''}**", expanded=(i <= 3)):
-                if r.get("image_url"):
-                    st.image(r["image_url"], width=220)
-                platform_text = r.get("platform") or "Unknown platform"
-                seller_text = r.get("seller") or "Seller unavailable"
-                st.write(f"**Platform:** {platform_text}")
-                st.write(f"**Seller / Store:** {seller_text}")
-                if r["price"]:
-                    st.write(f"**Price:** {r['price']}")
-                st.write(f"**Link:** [{r['url'][:60]}...]({r['url']})")
-                st.write("**Recommendation reasons:**")
-                for j, reason in enumerate(r["reasons"], 1):
-                    st.write(f"- {reason}")
-                with st.expander("Evidence (traceable fields)"):
-                    for field, value in r["evidence"]:
-                        st.code(f"{field}: {str(value)[:120]}", language=None)
+
+        # 2-column grid cards
+        for i in range(0, len(results), 2):
+            row_cols = st.columns(2)
+            for col_i in range(2):
+                idx = i + col_i
+                if idx >= len(results):
+                    continue
+                r = results[idx]
+
+                with row_cols[col_i]:
+                    with st.container(border=True):
+                        name = r.get("name") or "Unknown product"
+                        st.subheader(f"{idx + 1}. {_truncate(name, 72)}")
+
+                        image_url = r.get("image_url") or ""
+                        if image_url:
+                            st.image(image_url, use_container_width=True)
+
+                        platform_text = (r.get("platform") or "").strip() or "Unknown platform"
+                        seller_text = (r.get("seller") or "").strip() or ""
+                        seller_badge = f"<span class='badge'>Seller: {seller_text}</span>" if seller_text else ""
+
+                        st.markdown(
+                            f"""
+                            <div class="badgebar">
+                              <span class='badge'>Platform: {platform_text}</span>
+                              {seller_badge}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                        if r.get("price"):
+                            st.write(f"**Price:** {r['price']}")
+
+                        url = r.get("url") or ""
+                        if url:
+                            st.markdown(f"**Link:** [{_truncate(url, 52)}]({url})")
+
+                        with st.expander("Details (reasons & evidence)", expanded=False):
+                            st.markdown("**Recommendation reasons:**")
+                            for reason in r.get("reasons", []):
+                                st.write(f"- {reason}")
+
+                            with st.expander("Evidence (traceable fields)", expanded=False):
+                                for field, value in r.get("evidence", []):
+                                    st.code(f"{field}: {str(value)[:120]}", language=None)
 
 
 if __name__ == "__main__":
