@@ -47,6 +47,16 @@ def build_reasons(
             "text": f"From established brand: {product.brand}.",
             "evidence": ("brand", product.brand),
         })
+    if product.platform:
+        reasons.append({
+            "text": f"Available on platform: {product.platform}.",
+            "evidence": ("platform", product.platform),
+        })
+    if product.seller:
+        reasons.append({
+            "text": f"Seller/store identified: {product.seller}.",
+            "evidence": ("seller", product.seller),
+        })
     if product.description and len(product.description) > 20:
         desc = product.description[:120].strip() + ("..." if len(product.description) > 120 else "")
         reasons.append({

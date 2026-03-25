@@ -15,8 +15,70 @@ class ProductInfo:
     url: str = ""
     brand: str = ""
     description: str = ""
+    image_url: str = ""
+    platform: str = ""
+    seller: str = ""
     price_source: str = ""
     raw_fields: dict = field(default_factory=dict)
+
+
+def _platform_from_url(url: str) -> str:
+    if not url:
+        return ""
+    m = re.search(r"https?://(?:www\.)?([^/]+)", url, re.I)
+    if not m:
+        return ""
+    host = (m.group(1) or "").lower()
+    root = ".".join(host.split(".")[-2:]) if "." in host else host
+    names = {
+        "amazon.com": "Amazon",
+        "walmart.com": "Walmart",
+        "target.com": "Target",
+        "bestbuy.com": "Best Buy",
+        "ebay.com": "eBay",
+        "costco.com": "Costco",
+        "newegg.com": "Newegg",
+        "homedepot.com": "The Home Depot",
+        "lowes.com": "Lowe's",
+    }
+    return names.get(root, root)
+
+
+def _normalize_image_url(v: Any) -> str:
+    if isinstance(v, str) and v.strip():
+        return v.strip()
+    if isinstance(v, list):
+        for x in v:
+            if isinstance(x, str) and x.strip():
+                return x.strip()
+            if isinstance(x, dict):
+                candidate = x.get("url") or x.get("contentUrl")
+                if isinstance(candidate, str) and candidate.strip():
+                    return candidate.strip()
+    if isinstance(v, dict):
+        candidate = v.get("url") or v.get("contentUrl")
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def _extract_seller_from_offers(offers: Any) -> str:
+    if isinstance(offers, dict):
+        seller = offers.get("seller")
+        if isinstance(seller, dict):
+            return str(seller.get("name") or "")
+        if isinstance(seller, str):
+            return seller
+    if isinstance(offers, list):
+        for o in offers:
+            if not isinstance(o, dict):
+                continue
+            seller = o.get("seller")
+            if isinstance(seller, dict) and seller.get("name"):
+                return str(seller.get("name"))
+            if isinstance(seller, str) and seller:
+                return seller
+    return ""
 
 
 def _parse_json_ld(script_text: str) -> list[dict]:
@@ -36,11 +98,15 @@ def _extract_from_product_schema(obj: dict) -> dict[str, Any]:
     if isinstance(obj.get("@type"), str) and "Product" in obj.get("@type", ""):
         out["name"] = obj.get("name") or obj.get("title") or ""
         out["description"] = obj.get("description") or ""
+        out["image_url"] = _normalize_image_url(obj.get("image"))
         if isinstance(obj.get("brand"), dict):
             out["brand"] = obj.get("brand", {}).get("name", "")
         elif isinstance(obj.get("brand"), str):
             out["brand"] = obj.get("brand", "")
         offers = obj.get("offers")
+        seller = _extract_seller_from_offers(offers)
+        if seller:
+            out["seller"] = seller
         if isinstance(offers, dict):
             price = offers.get("price")
             curr = offers.get("priceCurrency", "USD")
@@ -107,11 +173,15 @@ def _extract_meta(soup: BeautifulSoup) -> dict[str, Any]:
                 pass
         elif "product:price:currency" in p or "og:price:currency" in p:
             out["currency"] = (c or "USD").upper()
+        elif "og:image" in p and c:
+            out.setdefault("image_url", c)
     for meta in soup.find_all("meta", attrs={"name": True}):
         n = (meta.get("name") or "").lower()
         c = meta.get("content", "")
         if n in ("twitter:title", "product:title") and not out.get("name"):
             out["name"] = c
+        elif n in ("twitter:image", "image") and c and not out.get("image_url"):
+            out["image_url"] = c
     return out
 
 
@@ -146,6 +216,9 @@ def _extract_from_item_list(obj: dict, page_url: str) -> list[ProductInfo]:
             info.currency = d.get("currency", "USD")
             info.brand = d.get("brand", "")
             info.description = d.get("description", "")
+            info.image_url = d.get("image_url", "")
+            info.seller = d.get("seller", "")
+            info.platform = _platform_from_url(page_url)
             info.raw_fields = d.get("raw", {})
             if info.name or info.price is not None:
                 out.append(info)
@@ -173,6 +246,7 @@ def extract_products(html: str, url: str = "") -> list[ProductInfo]:
 def extract_product(html: str, url: str = "") -> ProductInfo:
     """Extract product info from HTML. JSON-LD Product first, then meta, then text fallback."""
     info = ProductInfo(url=url)
+    info.platform = _platform_from_url(url)
     soup = BeautifulSoup(html, "lxml")
 
     for script in soup.find_all("script", type="application/ld+json"):
@@ -194,6 +268,10 @@ def extract_product(html: str, url: str = "") -> ProductInfo:
                         info.brand = info.brand or str(d.get("brand", ""))
                     if d.get("description"):
                         info.description = info.description or str(d.get("description", ""))
+                    if d.get("image_url"):
+                        info.image_url = info.image_url or str(d.get("image_url", ""))
+                    if d.get("seller"):
+                        info.seller = info.seller or str(d.get("seller", ""))
                     info.raw_fields.update(d.get("raw", {}))
                 elif "AggregateOffer" in t:
                     d = _extract_from_aggregate_offer(obj)
@@ -209,11 +287,17 @@ def extract_product(html: str, url: str = "") -> ProductInfo:
         info.price = meta["price"]
         info.currency = meta.get("currency", "USD")
         info.price_source = meta.get("price_source", info.price_source)
+    if meta.get("image_url") and not info.image_url:
+        info.image_url = str(meta.get("image_url", ""))
 
     if not info.name:
         title = soup.find("title")
         if title and title.string:
             info.name = title.string.strip()[:200]
+    if not info.seller:
+        seller_meta = soup.find("meta", attrs={"name": re.compile(r"(seller|merchant|store)", re.I)})
+        if seller_meta and seller_meta.get("content"):
+            info.seller = seller_meta.get("content", "").strip()
 
     # IMPORTANT:
     # Do not use plain-text regex price as final price, because it often matches

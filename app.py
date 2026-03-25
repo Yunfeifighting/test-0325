@@ -35,6 +35,9 @@ def _cached_extract(html: str, url: str) -> list[ProductInfo]:
             url=cached.get("url", url),
             brand=cached.get("brand", ""),
             description=cached.get("description", ""),
+            image_url=cached.get("image_url", ""),
+            platform=cached.get("platform", ""),
+            seller=cached.get("seller", ""),
             price_source=cached.get("price_source", ""),
             raw_fields=cached.get("raw_fields", {}),
         )]
@@ -42,11 +45,13 @@ def _cached_extract(html: str, url: str) -> list[ProductInfo]:
     if not infos:
         infos = [ProductInfo(url=url, name="Product")]
         set_(key, {"name": "Product", "url": url, "price": None, "currency": "USD",
-                   "brand": "", "description": "", "price_source": "", "raw_fields": {}}, max_age_hours=24)
+                   "brand": "", "description": "", "image_url": "", "platform": "",
+                   "seller": "", "price_source": "", "raw_fields": {}}, max_age_hours=24)
     elif infos:
         first = infos[0]
         set_(key, {"name": first.name, "price": first.price, "currency": first.currency,
                    "url": first.url, "brand": first.brand, "description": first.description,
+                   "image_url": first.image_url, "platform": first.platform, "seller": first.seller,
                    "price_source": first.price_source,
                    "raw_fields": first.raw_fields}, max_age_hours=24)
     return infos
@@ -108,6 +113,9 @@ def run_pipeline(user_input: str) -> list[dict]:
             "name": p.name or "Unknown product",
             "price": price_display,
             "url": p.url,
+            "image_url": p.image_url,
+            "platform": p.platform,
+            "seller": p.seller,
             "reasons": [r["text"] for r in reasons],
             "evidence": [(r["evidence"][0], r["evidence"][1]) for r in reasons],
         })
@@ -141,6 +149,12 @@ def main():
             return
         for i, r in enumerate(results, 1):
             with st.expander(f"**{i}. {r['name'][:80]}{'...' if len(r['name']) > 80 else ''}**", expanded=(i <= 3)):
+                if r.get("image_url"):
+                    st.image(r["image_url"], width=220)
+                platform_text = r.get("platform") or "Unknown platform"
+                seller_text = r.get("seller") or "Seller unavailable"
+                st.write(f"**Platform:** {platform_text}")
+                st.write(f"**Seller / Store:** {seller_text}")
                 if r["price"]:
                     st.write(f"**Price:** {r['price']}")
                 st.write(f"**Link:** [{r['url'][:60]}...]({r['url']})")
