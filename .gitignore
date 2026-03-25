@@ -1,0 +1,11 @@
+.cache/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.env
+
+# Optional: other folders in same workspace (do not commit secrets)
+asin-dashboard/.env
+claude test/

@@ -1,0 +1,15 @@
+[server]
+# 允许从本机和局域网访问
+address = "0.0.0.0"
+# 端口
+port = 8501
+# 不自动打开浏览器，避免部分环境报错
+headless = true
+# 允许本地 CORS
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+# 不自动弹窗
+serverAddress = "localhost"
+gatherUsageStats = false
