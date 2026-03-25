@@ -155,7 +155,7 @@ def _inject_tech_css() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
         @keyframes aurora{
             0%  {background-position:0% 50%}
@@ -164,263 +164,294 @@ def _inject_tech_css() -> None:
         }
         @keyframes float-orb{
             0%,100%{transform:translate(0,0) scale(1)}
-            33%{transform:translate(30px,-20px) scale(1.08)}
-            66%{transform:translate(-20px,15px) scale(0.95)}
+            33%{transform:translate(40px,-25px) scale(1.1)}
+            66%{transform:translate(-30px,20px) scale(0.92)}
         }
-        @keyframes shimmer{
-            0%{background-position:-200% 0}
-            100%{background-position:200% 0}
+        @keyframes scan{
+            0%{top:-15%}
+            100%{top:115%}
         }
-        @keyframes breathe{
-            0%,100%{opacity:0.6}
-            50%{opacity:1}
+        @keyframes border-pulse{
+            0%,100%{border-color:rgba(0,200,255,0.12)}
+            50%{border-color:rgba(100,80,240,0.28)}
+        }
+        @keyframes hud-blink{
+            0%,90%,100%{opacity:0.5}
+            95%{opacity:1}
         }
 
-        /* ── Base: deep space + aurora wash ── */
+        /* ── Base ── */
         html, body, [data-testid="stAppViewContainer"]{
             background:
-                radial-gradient(ellipse 900px 600px at 15% 20%, rgba(120,80,220,0.18), transparent),
-                radial-gradient(ellipse 700px 500px at 75% 15%, rgba(0,180,255,0.13), transparent),
-                radial-gradient(ellipse 600px 400px at 50% 80%, rgba(200,80,180,0.10), transparent),
-                radial-gradient(ellipse 500px 500px at 90% 70%, rgba(0,220,200,0.08), transparent),
-                linear-gradient(160deg, #06080f 0%, #0a0e1a 30%, #080c18 60%, #050810 100%);
+                radial-gradient(ellipse 1000px 700px at 12% 18%, rgba(100,50,200,0.20), transparent),
+                radial-gradient(ellipse 800px 550px at 78% 12%, rgba(0,160,255,0.15), transparent),
+                radial-gradient(ellipse 650px 450px at 45% 82%, rgba(220,60,180,0.11), transparent),
+                radial-gradient(ellipse 550px 550px at 92% 65%, rgba(0,240,210,0.09), transparent),
+                linear-gradient(160deg, #04060c 0%, #080d1a 30%, #060a16 60%, #040710 100%);
             background-size: 200% 200%;
-            animation: aurora 25s ease infinite;
-            color: #d8e4f0;
+            animation: aurora 22s ease infinite;
+            color: #d0dce8;
             font-family: 'Inter', -apple-system, sans-serif;
         }
         [data-testid="stHeader"]{background:transparent !important}
 
-        /* ── Floating orbs (decorative) ── */
+        /* ── Floating orbs ── */
         [data-testid="stAppViewContainer"]::before,
         [data-testid="stAppViewContainer"]::after{
             content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
-            filter:blur(80px);
         }
         [data-testid="stAppViewContainer"]::before{
-            width:500px;height:500px;top:-80px;left:-100px;
-            background:radial-gradient(circle, rgba(100,60,220,0.22), transparent 70%);
-            animation:float-orb 18s ease-in-out infinite;
+            width:600px;height:600px;top:-120px;left:-150px;
+            background:radial-gradient(circle, rgba(100,40,220,0.25), transparent 65%);
+            filter:blur(90px);
+            animation:float-orb 16s ease-in-out infinite;
         }
         [data-testid="stAppViewContainer"]::after{
-            width:420px;height:420px;bottom:-60px;right:-80px;
-            background:radial-gradient(circle, rgba(0,200,240,0.16), transparent 70%);
-            animation:float-orb 22s ease-in-out infinite reverse;
+            width:500px;height:500px;bottom:-80px;right:-120px;
+            background:radial-gradient(circle, rgba(0,200,255,0.18), transparent 65%);
+            filter:blur(85px);
+            animation:float-orb 20s ease-in-out infinite reverse;
         }
         [data-testid="stAppViewContainer"] > *{position:relative;z-index:1}
 
+        /* ── Scan line ── */
+        .scan-overlay{
+            position:fixed;left:0;width:100%;height:3px;pointer-events:none;z-index:999;
+            background:linear-gradient(90deg, transparent 5%, rgba(0,200,255,0.35) 50%, transparent 95%);
+            box-shadow:0 0 20px 4px rgba(0,200,255,0.10);
+            animation:scan 6s linear infinite;
+            opacity:0.5;
+        }
+
+        /* ── Grid dot pattern ── */
+        .dot-grid{
+            position:fixed;inset:0;pointer-events:none;z-index:0;
+            background-image:radial-gradient(rgba(100,140,255,0.07) 1px, transparent 1px);
+            background-size:32px 32px;
+        }
+
         /* ── Title ── */
         [data-testid="stAppViewContainer"] h1{
-            font-family:'Inter',sans-serif !important;
-            font-weight:700 !important;
-            font-size:2.6rem !important;
-            background:linear-gradient(135deg, #a78bfa 0%, #60a5fa 30%, #34d399 60%, #a78bfa 100%);
+            font-family:'Orbitron','Inter',sans-serif !important;
+            font-weight:800 !important;
+            font-size:2.4rem !important;
+            background:linear-gradient(135deg, #a78bfa 0%, #38bdf8 35%, #34d399 65%, #c084fc 100%);
             background-size:300% auto;
             -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-            animation:aurora 8s linear infinite;
-            letter-spacing:-0.5px;
+            animation:aurora 7s linear infinite;
+            letter-spacing:2px;
             text-align:center;
+            text-transform:uppercase;
         }
 
         /* ── Subtitle ── */
         .subtitle{
             text-align:center;
-            font-size:0.88rem;font-weight:400;
-            letter-spacing:3px;
-            color:rgba(168,162,220,0.55);
+            font-size:0.75rem;font-weight:500;
+            letter-spacing:5px;text-transform:uppercase;
+            color:rgba(0,200,255,0.40);
             font-family:'JetBrains Mono',monospace;
-            margin:-4px 0 28px;
+            margin:-2px 0 30px;
+            animation:hud-blink 4s ease infinite;
+        }
+
+        /* ── Search area wrapper ── */
+        .search-wrap{
+            max-width:560px;
+            margin:0 auto 6px;
         }
 
         /* ── Search input ── */
         textarea, [data-testid="stTextArea"] textarea{
-            background:rgba(14,18,36,0.70) !important;
-            border:1px solid rgba(140,120,220,0.20) !important;
-            border-radius:14px !important;
-            color:#d0dce8 !important;
+            background:rgba(8,12,28,0.75) !important;
+            border:1px solid rgba(0,180,255,0.18) !important;
+            border-radius:12px !important;
+            color:#c8d8e8 !important;
             font-family:'Inter',sans-serif !important;
-            font-size:0.95rem !important;
-            backdrop-filter:blur(12px);
+            font-size:0.9rem !important;
+            backdrop-filter:blur(14px);
             transition:border-color .3s, box-shadow .3s;
+            animation:border-pulse 5s ease infinite;
         }
         textarea:focus, [data-testid="stTextArea"] textarea:focus{
-            border-color:rgba(140,120,255,0.50) !important;
-            box-shadow:0 0 24px rgba(120,80,220,0.12), 0 0 8px rgba(0,180,255,0.08) !important;
+            border-color:rgba(100,80,255,0.50) !important;
+            box-shadow:0 0 28px rgba(100,60,220,0.14), 0 0 8px rgba(0,200,255,0.08) !important;
+            animation:none;
         }
 
         /* ── Search button ── */
         .stButton>button{
-            background:linear-gradient(135deg, rgba(100,60,220,0.30), rgba(0,160,240,0.20)) !important;
-            border:1px solid rgba(140,120,255,0.30) !important;
-            border-radius:14px !important;
-            color:#d4d0f8 !important;
+            background:linear-gradient(135deg, rgba(80,40,200,0.35), rgba(0,160,255,0.22)) !important;
+            border:1px solid rgba(0,200,255,0.30) !important;
+            border-radius:12px !important;
+            color:#c0e8ff !important;
             font-weight:600 !important;
-            font-family:'Inter',sans-serif !important;
-            font-size:0.95rem !important;
-            padding:0.65rem 2.8rem !important;
-            letter-spacing:0.8px;
+            font-family:'Orbitron','Inter',sans-serif !important;
+            font-size:0.85rem !important;
+            padding:0.55rem 2rem !important;
+            letter-spacing:2px;text-transform:uppercase;
             transition:all .35s cubic-bezier(.4,0,.2,1);
         }
         .stButton>button:hover{
-            background:linear-gradient(135deg, rgba(120,80,240,0.45), rgba(0,180,255,0.30)) !important;
-            border-color:rgba(160,140,255,0.60) !important;
-            box-shadow:0 0 32px rgba(120,80,220,0.20), 0 4px 16px rgba(0,0,0,0.3) !important;
+            background:linear-gradient(135deg, rgba(100,60,240,0.50), rgba(0,200,255,0.35)) !important;
+            border-color:rgba(0,220,255,0.65) !important;
+            box-shadow:0 0 36px rgba(0,200,255,0.20), 0 0 12px rgba(100,60,220,0.15) !important;
             transform:translateY(-2px);
         }
 
-        /* ── Product card ── */
-        .product-card{
-            background:rgba(12,16,32,0.55);
-            backdrop-filter:blur(20px) saturate(1.5);
-            border:1px solid rgba(120,100,200,0.14);
-            border-radius:20px;
+        /* ── HUD card wrapper (applied to st.container border) ── */
+        [data-testid="stVerticalBlockBorderWrapper"]{
+            background:rgba(8,12,26,0.50) !important;
+            backdrop-filter:blur(18px) saturate(1.4) !important;
+            border:1px solid rgba(0,180,255,0.12) !important;
+            border-radius:16px !important;
+            box-shadow:0 4px 32px rgba(0,0,0,0.4) !important;
             overflow:hidden;
             transition:border-color .4s, box-shadow .4s, transform .3s;
-            margin-bottom:4px;
-        }
-        .product-card:hover{
-            border-color:rgba(140,120,255,0.35);
-            box-shadow:
-                0 12px 48px rgba(0,0,0,0.45),
-                0 0 30px rgba(120,80,220,0.10),
-                inset 0 1px 0 rgba(255,255,255,0.04);
-            transform:translateY(-4px);
-        }
-
-        /* ── Card image ── */
-        .card-img-wrap{
             position:relative;
-            background:linear-gradient(135deg, rgba(10,14,28,0.9), rgba(16,20,40,0.9));
-            display:flex;align-items:center;justify-content:center;
-            min-height:200px;max-height:280px;
-            overflow:hidden;
         }
-        .card-img-wrap::after{
-            content:'';position:absolute;inset:0;
-            background:linear-gradient(180deg, transparent 60%, rgba(12,16,32,0.95) 100%);
-            pointer-events:none;
-        }
-        .card-img-wrap img{
-            width:100%;height:100%;
-            object-fit:contain;
-            max-height:280px;
-            padding:12px;
-            transition:transform .4s cubic-bezier(.4,0,.2,1);
-        }
-        .product-card:hover .card-img-wrap img{
-            transform:scale(1.05);
+        [data-testid="stVerticalBlockBorderWrapper"]:hover{
+            border-color:rgba(0,200,255,0.32) !important;
+            box-shadow:0 8px 48px rgba(0,0,0,0.5), 0 0 24px rgba(0,180,255,0.08) !important;
+            transform:translateY(-3px);
         }
 
-        /* ── Card body ── */
-        .card-body{padding:18px 20px 20px;}
+        /* ── HUD corners ── */
+        .hud-corner{
+            position:absolute;width:18px;height:18px;pointer-events:none;z-index:2;
+        }
+        .hud-tl{top:6px;left:6px;border-top:2px solid rgba(0,200,255,0.40);border-left:2px solid rgba(0,200,255,0.40)}
+        .hud-tr{top:6px;right:6px;border-top:2px solid rgba(0,200,255,0.40);border-right:2px solid rgba(0,200,255,0.40)}
+        .hud-bl{bottom:6px;left:6px;border-bottom:2px solid rgba(0,200,255,0.40);border-left:2px solid rgba(0,200,255,0.40)}
+        .hud-br{bottom:6px;right:6px;border-bottom:2px solid rgba(0,200,255,0.40);border-right:2px solid rgba(0,200,255,0.40)}
 
+        /* ── Card title ── */
         .card-title{
             font-family:'Inter',sans-serif;
-            font-weight:600;font-size:1.02rem;
-            color:#e8edf4;
+            font-weight:600;font-size:1rem;
+            color:#e4eaf0;
             line-height:1.4;
             margin:0 0 10px;
             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
         }
 
         /* ── Badges ── */
-        .badgebar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
+        .badgebar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
         .badge{
             display:inline-flex;align-items:center;gap:4px;
-            padding:4px 12px;
-            border-radius:8px;
-            font-size:0.78rem;font-weight:500;
-            font-family:'Inter',sans-serif;
+            padding:4px 11px;
+            border-radius:6px;
+            font-size:0.76rem;font-weight:500;
+            font-family:'JetBrains Mono','Inter',monospace;
             line-height:1.2;
             backdrop-filter:blur(4px);
             transition:transform .2s;
         }
         .badge:hover{transform:translateY(-1px)}
         .badge-platform{
-            background:rgba(100,80,200,0.15);
-            border:1px solid rgba(140,120,255,0.25);
-            color:#c4b8f0;
+            background:rgba(0,160,255,0.12);
+            border:1px solid rgba(0,200,255,0.25);
+            color:#a0d8f8;
         }
         .badge-seller{
-            background:rgba(0,200,180,0.08);
-            border:1px solid rgba(0,200,180,0.20);
-            color:#90e0d0;
+            background:rgba(0,220,180,0.08);
+            border:1px solid rgba(0,220,180,0.20);
+            color:#80e0cc;
         }
         .badge-brand{
-            background:rgba(200,140,255,0.08);
-            border:1px solid rgba(200,160,255,0.20);
-            color:#d0b8f0;
+            background:rgba(180,120,255,0.08);
+            border:1px solid rgba(180,140,255,0.20);
+            color:#c8b0f0;
         }
-        .badge-custom{
-            border:1px solid;
-            font-weight:600;
-        }
+        .badge-custom{border:1px solid;font-weight:600}
 
         /* ── Price ── */
-        .price-row{display:flex;align-items:baseline;gap:8px;margin:0 0 14px}
+        .price-row{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px}
         .price-tag{
-            font-family:'JetBrains Mono','Inter',monospace;
-            font-size:1.4rem;font-weight:700;
-            background:linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            font-family:'Orbitron','JetBrains Mono',monospace;
+            font-size:1.3rem;font-weight:700;
+            color:#00e0ff;
+            text-shadow:0 0 14px rgba(0,220,255,0.30);
         }
         .price-unavailable{
-            font-size:0.82rem;
-            color:rgba(160,170,190,0.40);
+            font-size:0.80rem;
+            color:rgba(140,150,170,0.40);
             font-style:italic;
         }
 
         /* ── Link button ── */
         .link-btn{
             display:inline-flex;align-items:center;gap:6px;
-            background:linear-gradient(135deg, rgba(100,60,220,0.18), rgba(0,160,240,0.12));
-            border:1px solid rgba(140,120,255,0.22);
-            border-radius:10px;
-            padding:8px 20px;
-            color:#b8b0e8 !important;
-            font-size:0.84rem;font-weight:500;
+            background:linear-gradient(135deg, rgba(0,120,220,0.15), rgba(0,200,255,0.08));
+            border:1px solid rgba(0,200,255,0.22);
+            border-radius:8px;
+            padding:7px 18px;
+            color:#90d4f0 !important;
+            font-size:0.80rem;font-weight:500;
             text-decoration:none !important;
-            font-family:'Inter',sans-serif;
+            font-family:'JetBrains Mono','Inter',monospace;
+            letter-spacing:0.5px;
             transition:all .3s cubic-bezier(.4,0,.2,1);
         }
         .link-btn:hover{
-            background:linear-gradient(135deg, rgba(120,80,240,0.30), rgba(0,180,255,0.20));
-            border-color:rgba(160,140,255,0.50);
-            box-shadow:0 0 20px rgba(120,80,220,0.14);
-            color:#e0d8ff !important;
+            background:linear-gradient(135deg, rgba(0,140,240,0.28), rgba(0,220,255,0.18));
+            border-color:rgba(0,220,255,0.55);
+            box-shadow:0 0 18px rgba(0,200,255,0.12);
+            color:#d0f0ff !important;
             transform:translateY(-1px);
         }
-        .link-btn svg{width:14px;height:14px;fill:currentColor;opacity:0.7}
+        .link-btn svg{width:13px;height:13px;fill:currentColor;opacity:0.6}
+
+        /* ── Product image (st.image) ── */
+        [data-testid="stImage"]{
+            border-radius:10px;
+            overflow:hidden;
+            border:1px solid rgba(0,180,255,0.10);
+            background:rgba(6,10,22,0.6);
+        }
+        [data-testid="stImage"] img{
+            object-fit:contain !important;
+            max-height:240px !important;
+        }
+        [data-testid="stImage"]:hover img{
+            transform:scale(1.03);
+            transition:transform .4s ease;
+        }
 
         /* ── Expander ── */
         [data-testid="stExpander"]{
-            border:1px solid rgba(120,100,200,0.10) !important;
-            border-radius:12px !important;
-            background:rgba(10,14,28,0.35) !important;
+            border:1px solid rgba(0,160,255,0.08) !important;
+            border-radius:10px !important;
+            background:rgba(6,10,22,0.30) !important;
         }
         [data-testid="stExpander"] summary{
-            font-family:'Inter',sans-serif !important;
+            font-family:'JetBrains Mono','Inter',monospace !important;
             font-weight:500 !important;
-            color:rgba(168,160,220,0.70) !important;
-            font-size:0.88rem !important;
+            color:rgba(0,200,255,0.45) !important;
+            font-size:0.82rem !important;
+            letter-spacing:0.5px;
         }
 
         /* ── Result count ── */
         .result-count{
             text-align:center;
-            font-size:0.82rem;
-            color:rgba(140,130,200,0.45);
-            margin:12px 0 22px;
-            letter-spacing:2px;
-            font-family:'JetBrains Mono',monospace;
+            font-size:0.78rem;
+            color:rgba(0,200,255,0.35);
+            margin:14px 0 24px;
+            letter-spacing:3px;
+            font-family:'Orbitron','JetBrains Mono',monospace;
+            text-transform:uppercase;
         }
 
-        /* ── Divider line ── */
+        /* ── Divider ── */
         .divider{
-            height:1px;margin:14px 0;
-            background:linear-gradient(90deg, transparent, rgba(140,120,220,0.15), transparent);
+            height:1px;margin:12px 0;
+            background:linear-gradient(90deg, transparent, rgba(0,180,255,0.12), transparent);
         }
         </style>
+
+        <div class="dot-grid"></div>
+        <div class="scan-overlay"></div>
         """,
         unsafe_allow_html=True,
     )
@@ -437,9 +468,10 @@ def _platform_badge_html(platform: str) -> str:
     return f"<span class='badge badge-platform'>{platform}</span>"
 
 
-def _render_card_html(r: dict, idx: int) -> str:
-    name = _truncate(r.get("name") or "Unknown product", 80)
-    image_url = (r.get("image_url") or "").strip() or _PLACEHOLDER_IMG
+def _render_card(r: dict, idx: int) -> None:
+    """Render a single product card using Streamlit native + HTML hybrid."""
+    name = r.get("name") or "Unknown product"
+    image_url = (r.get("image_url") or "").strip()
     platform_text = (r.get("platform") or "").strip() or "Unknown"
     seller_text = (r.get("seller") or "").strip()
     price_raw = r.get("price") or ""
@@ -451,42 +483,53 @@ def _render_card_html(r: dict, idx: int) -> str:
             brand_text = reason.split(":")[-1].strip().rstrip(".")
             break
 
-    badges_html = _platform_badge_html(platform_text)
-    if seller_text:
-        badges_html += f"<span class='badge badge-seller'>{_truncate(seller_text, 28)}</span>"
-    if brand_text:
-        badges_html += f"<span class='badge badge-brand'>{_truncate(brand_text, 24)}</span>"
+    with st.container(border=True):
+        st.markdown(
+            '<div class="hud-corner hud-tl"></div><div class="hud-corner hud-tr"></div>'
+            '<div class="hud-corner hud-bl"></div><div class="hud-corner hud-br"></div>',
+            unsafe_allow_html=True,
+        )
 
-    if price_raw and "unavailable" not in price_raw.lower():
-        price_html = f'<span class="price-tag">{price_raw}</span>'
-    else:
-        price_html = '<span class="price-unavailable">Price unavailable</span>'
+        if image_url:
+            st.image(image_url, use_container_width=True)
 
-    arrow_svg = (
-        '<svg viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 '
-        '101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>'
-        '<path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 '
-        '10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>'
-    )
-    link_html = (
-        f'<a class="link-btn" href="{url}" target="_blank" rel="noopener">'
-        f'View on {platform_text} {arrow_svg}</a>'
-    ) if url else ""
+        st.markdown(
+            f'<div class="card-title">{idx}. {_truncate(name, 72)}</div>',
+            unsafe_allow_html=True,
+        )
 
-    return f"""
-    <div class="product-card">
-      <div class="card-img-wrap">
-        <img src="{image_url}" alt="{_truncate(name, 40)}" loading="lazy"
-             onerror="this.src='{_PLACEHOLDER_IMG}'">
-      </div>
-      <div class="card-body">
-        <div class="card-title">{idx}. {name}</div>
-        <div class="badgebar">{badges_html}</div>
-        <div class="price-row">{price_html}</div>
-        {link_html}
-      </div>
-    </div>
-    """
+        badges = _platform_badge_html(platform_text)
+        if seller_text:
+            badges += f"<span class='badge badge-seller'>{_truncate(seller_text, 28)}</span>"
+        if brand_text:
+            badges += f"<span class='badge badge-brand'>{_truncate(brand_text, 24)}</span>"
+        st.markdown(f'<div class="badgebar">{badges}</div>', unsafe_allow_html=True)
+
+        if price_raw and "unavailable" not in price_raw.lower():
+            st.markdown(f'<div class="price-row"><span class="price-tag">{price_raw}</span></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="price-row"><span class="price-unavailable">Price unavailable</span></div>', unsafe_allow_html=True)
+
+        if url:
+            arrow = (
+                '<svg viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 '
+                '101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>'
+                '<path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 '
+                '10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>'
+            )
+            st.markdown(
+                f'<a class="link-btn" href="{url}" target="_blank" rel="noopener">'
+                f'View on {platform_text} {arrow}</a>',
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("// DETAILS", expanded=False):
+            for reason in r.get("reasons", []):
+                st.write(f"- {reason}")
+            if r.get("evidence"):
+                st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+                for fld, val in r.get("evidence", []):
+                    st.code(f"{fld}: {str(val)[:120]}", language=None)
 
 
 def main():
@@ -495,19 +538,18 @@ def main():
 
     st.markdown('<h1>SKU Check</h1>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitle">INTELLIGENT PRODUCT DISCOVERY</p>',
+        '<p class="subtitle">Intelligent Product Discovery Engine</p>',
         unsafe_allow_html=True,
     )
 
-    user_input = st.text_area(
-        "Describe what you are looking for:",
-        height=100,
-        placeholder="e.g., Wireless headphones under $100 for running, noise cancellation preferred",
-    )
-
-    col_left, col_center, col_right = st.columns([1, 1, 1])
-    with col_center:
-        search_clicked = st.button("Search", use_container_width=True)
+    _, search_col, _ = st.columns([1, 2, 1])
+    with search_col:
+        user_input = st.text_area(
+            "Describe what you are looking for:",
+            height=72,
+            placeholder="e.g., Wireless headphones under $100, noise cancellation",
+        )
+        search_clicked = st.button("SEARCH", use_container_width=True)
 
     if search_clicked:
         if not (user_input or "").strip():
@@ -525,7 +567,7 @@ def main():
             return
 
         st.markdown(
-            f'<div class="result-count">{len(results)} PRODUCT{"S" if len(results) != 1 else ""} FOUND</div>',
+            f'<div class="result-count">// {len(results)} TARGET{"S" if len(results) != 1 else ""} ACQUIRED //</div>',
             unsafe_allow_html=True,
         )
 
@@ -535,19 +577,8 @@ def main():
                 idx = i + col_i
                 if idx >= len(results):
                     continue
-                r = results[idx]
                 with row_cols[col_i]:
-                    st.markdown(
-                        _render_card_html(r, idx + 1),
-                        unsafe_allow_html=True,
-                    )
-                    with st.expander("Details & evidence", expanded=False):
-                        for reason in r.get("reasons", []):
-                            st.write(f"- {reason}")
-                        if r.get("evidence"):
-                            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-                            for fld, val in r.get("evidence", []):
-                                st.code(f"{fld}: {str(val)[:120]}", language=None)
+                    _render_card(results[idx], idx + 1)
 
 
 if __name__ == "__main__":
