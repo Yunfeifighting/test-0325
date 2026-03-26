@@ -99,17 +99,37 @@ def _resolve_img_url(src: str, page_url: str) -> str:
 
 
 def _is_product_image(src: str) -> bool:
-    """Filter out icons, tracking pixels, tiny placeholders."""
+    """Filter out icons, tracking pixels, logos, tiny placeholders."""
     if not src:
         return False
     low = src.lower()
     skip = (
         "pixel", "beacon", "track", "spacer", "blank", "logo", "icon",
         "sprite", "1x1", "spinner", "loading", "placeholder",
-        "data:image", ".gif", "transparent", "arrow", "chevron",
-        "badge", "rating", "star", "banner",
+        "data:image", "transparent", "arrow", "chevron",
+        "badge", "rating", "star-", "banner", "swoosh", "brand-logo",
+        "favicon", "avatar", "profile", "social", "share",
+        "nav-", "menu-", "footer", "header-logo",
     )
     return not any(s in low for s in skip)
+
+
+def _looks_like_site_logo(src: str, page_url: str) -> bool:
+    """Detect if an image is likely a site-wide logo rather than product photo."""
+    if not src:
+        return False
+    low = src.lower()
+    logo_hints = ("logo", "brand", "swoosh", "favicon", "sprite", "icon")
+    if any(h in low for h in logo_hints):
+        return True
+    from urllib.parse import urlparse
+    try:
+        img_path = urlparse(src).path.lower()
+    except Exception:
+        return False
+    if len(img_path) < 15 and not any(x in img_path for x in ("/dp/", "/product", "/item")):
+        return True
+    return False
 
 
 def _extract_image_from_html(soup: BeautifulSoup, page_url: str) -> str:
@@ -161,33 +181,44 @@ def _extract_image_from_html(soup: BeautifulSoup, page_url: str) -> str:
             ".swiper-slide img",
             ".product-main-aside img",
         ]
+    elif "nike." in host:
+        selectors = [
+            "[data-testid='HeroPDP'] img",
+            "#pdp_6up img",
+            ".css-1c4bpts img",
+            "[data-testid='carousel'] img",
+            "picture.css-1fxh5tw img",
+            "picture source",
+            "#hero-image img",
+            ".product-image img",
+        ]
 
     selectors += [
         "[itemprop='image']",
+        "picture > img",
         "main img[src*='product']",
         "main img[src*='item']",
+        "main img[src*='images']",
         "#product-image img",
         ".product-image img",
         ".product-img img",
         ".pdp-image img",
         ".gallery img",
+        ".hero-image img",
         "[data-component='image'] img",
+        "[role='img'] img",
+        "main picture img",
+        "figure img",
     ]
 
-    for sel in selectors:
-        try:
-            el = soup.select_one(sel)
-        except Exception:
-            continue
-        if not el:
-            continue
-        tag = el if el.name == "img" else el.find("img")
+    def _src_from_tag(tag) -> str:
         if not tag:
-            tag = el
+            return ""
         src = (
             tag.get("src")
             or tag.get("data-src")
             or tag.get("data-old-hires")
+            or tag.get("data-zoom-image")
             or tag.get("data-a-dynamic-image", "")
         )
         if isinstance(src, str) and "{" in src:
@@ -197,15 +228,38 @@ def _extract_image_from_html(soup: BeautifulSoup, page_url: str) -> str:
                     src = max(img_dict.keys(), key=lambda k: sum(img_dict.get(k, [0, 0])))
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
-        resolved = _resolve_img_url(str(src or ""), page_url)
-        if resolved and _is_product_image(resolved):
+        if not src:
+            srcset = tag.get("srcset", "")
+            if srcset:
+                parts = [p.strip().split()[0] for p in srcset.split(",") if p.strip()]
+                if parts:
+                    src = parts[-1]
+        return str(src or "")
+
+    for sel in selectors:
+        try:
+            el = soup.select_one(sel)
+        except Exception:
+            continue
+        if not el:
+            continue
+        tag = el if el.name == "img" else el.find("img")
+        if not tag and el.name == "source":
+            tag = el
+        if not tag:
+            tag = el
+        src = _src_from_tag(tag)
+        resolved = _resolve_img_url(src, page_url)
+        if resolved and _is_product_image(resolved) and not _looks_like_site_logo(resolved, page_url):
             return resolved
 
     candidates: list[tuple[int, str]] = []
-    for img in soup.find_all("img", src=True):
-        src = str(img.get("src") or img.get("data-src") or "")
+    for img in soup.find_all("img"):
+        src = _src_from_tag(img)
         resolved = _resolve_img_url(src, page_url)
         if not resolved or not _is_product_image(resolved):
+            continue
+        if _looks_like_site_logo(resolved, page_url):
             continue
         w = 0
         try:
@@ -217,12 +271,18 @@ def _extract_image_from_html(soup: BeautifulSoup, page_url: str) -> str:
             h = int(img.get("height") or 0)
         except (ValueError, TypeError):
             pass
+        alt = (img.get("alt") or "").lower()
         area = max(w, 1) * max(h, 1)
-        if w and w < 50:
+        if w and w < 80:
             continue
-        if h and h < 50:
+        if h and h < 80:
             continue
-        candidates.append((area, resolved))
+        bonus = 0
+        if any(kw in alt for kw in ("product", "shoe", "item", "image")):
+            bonus = 500000
+        if any(kw in resolved.lower() for kw in ("product", "/dp/", "/ip/", "/itm/", "images/I/")):
+            bonus += 300000
+        candidates.append((area + bonus, resolved))
 
     if candidates:
         candidates.sort(key=lambda x: -x[0])
@@ -335,8 +395,64 @@ def _extract_meta(soup: BeautifulSoup) -> dict[str, Any]:
     return out
 
 
+def _extract_price_from_css(soup: BeautifulSoup) -> Optional[float]:
+    """Extract price from common HTML/CSS patterns across retailers."""
+    price_selectors = [
+        "[itemprop='price']",
+        "[data-testid='currentPrice']",
+        "[data-testid='product-price']",
+        "[data-automation-id='productPrice']",
+        ".product-price .current-price",
+        ".product-price",
+        ".price-characteristic",
+        ".priceView-customer-price span",
+        ".priceView-hero-price span",
+        "#priceblock_ourprice",
+        "#priceblock_dealprice",
+        ".a-price .a-offscreen",
+        ".price--current",
+        ".css-b9fpep",
+        ".headline-5a",
+        "[data-test='product-price']",
+        ".styles__currentPriceValue",
+        ".ProductPrice",
+        ".price .sale",
+        ".price-value",
+        ".price__current",
+        ".actual-price",
+        ".sale-price",
+        ".now-price",
+        ".offer-price",
+    ]
+    for sel in price_selectors:
+        try:
+            el = soup.select_one(sel)
+        except Exception:
+            continue
+        if not el:
+            continue
+        val = el.get("content") or el.get("value") or ""
+        if val:
+            try:
+                p = float(str(val).replace(",", ""))
+                if 0.5 <= p <= 50000:
+                    return p
+            except (ValueError, TypeError):
+                pass
+        text = el.get_text(strip=True)
+        if text:
+            m = re.search(r'\$?([\d,]+\.?\d*)', text)
+            if m:
+                try:
+                    p = float(m.group(1).replace(",", ""))
+                    if 0.5 <= p <= 50000:
+                        return p
+                except (ValueError, TypeError):
+                    pass
+    return None
+
+
 def _extract_price_from_text(text: str) -> tuple[Optional[float], str]:
-    # Look for $XX.XX or USD XX.XX
     m = re.search(r'\$[\d,]+\.?\d*|USD\s*[\d,]+\.?\d*', text, re.I)
     if m:
         s = re.sub(r'[^\d.]', '', m.group().replace(',', ''))
@@ -452,14 +568,28 @@ def extract_product(html: str, url: str = "") -> ProductInfo:
 
     if info.image_url:
         info.image_url = _resolve_img_url(info.image_url, url)
-    if not info.image_url or not _is_product_image(info.image_url):
-        info.image_url = _extract_image_from_html(soup, url)
+    if (
+        not info.image_url
+        or not _is_product_image(info.image_url)
+        or _looks_like_site_logo(info.image_url, url)
+    ):
+        html_img = _extract_image_from_html(soup, url)
+        if html_img:
+            info.image_url = html_img
 
     if info.price is None:
-        body = soup.get_text()[:3000]
+        css_price = _extract_price_from_css(soup)
+        if css_price is not None:
+            info.price = css_price
+            info.currency = "USD"
+            info.price_source = "css_selector"
+
+    if info.price is None:
+        body = soup.get_text()[:5000]
         p, c = _extract_price_from_text(body)
-        if p is not None:
-            info.raw_fields.setdefault("text_price_candidate", p)
-            info.raw_fields.setdefault("text_price_currency_candidate", c)
+        if p is not None and 1.0 <= p <= 50000.0:
+            info.price = p
+            info.currency = c
+            info.price_source = "text_regex"
 
     return info

@@ -104,11 +104,15 @@ def run_pipeline(user_input: str) -> list[dict]:
     results = []
     for p in ranked:
         reasons = build_reasons(p, intent.keywords, intent.budget_min, intent.budget_max)
-        price_display = f"${p.price:.2f}" if p.price is not None and p.currency == "USD" else None
-        if p.price is not None and p.currency != "USD":
-            price_display = f"{p.currency} {p.price:.2f} (non-USD)"
+        price_display = None
+        if p.price is not None:
+            approx = "~" if p.price_source in ("text_regex", "css_selector") else ""
+            if p.currency == "USD":
+                price_display = f"{approx}${p.price:.2f}"
+            else:
+                price_display = f"{approx}{p.currency} {p.price:.2f}"
         if p.price is None:
-            price_display = "Price unavailable (no reliable structured price found)"
+            price_display = "Price unavailable"
         results.append({
             "name": p.name or "Unknown product",
             "price": price_display,
