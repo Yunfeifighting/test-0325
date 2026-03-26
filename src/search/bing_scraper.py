@@ -207,6 +207,9 @@ def get_demo_results(user_input: str, intent_keywords: List[str] | None) -> List
             "name": f"{name} - Search for '{kw}'",
             "price": "See site for current prices",
             "url": url,
+            "image_url": "",
+            "platform": name,
+            "seller": "",
             "reasons": [
                 f"Recommended for your search: '{kw}'.",
                 f"US-based retailer {name} with competitive pricing.",

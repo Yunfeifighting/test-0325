@@ -3,6 +3,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -78,6 +79,155 @@ def _extract_seller_from_offers(offers: Any) -> str:
                 return str(seller.get("name"))
             if isinstance(seller, str) and seller:
                 return seller
+    return ""
+
+
+def _resolve_img_url(src: str, page_url: str) -> str:
+    """Resolve potentially relative image URL to absolute."""
+    if not src or not src.strip():
+        return ""
+    src = src.strip()
+    if src.startswith("data:"):
+        return ""
+    if src.startswith("//"):
+        return "https:" + src
+    if src.startswith("/"):
+        return urljoin(page_url, src)
+    if not src.startswith("http"):
+        return urljoin(page_url, src)
+    return src
+
+
+def _is_product_image(src: str) -> bool:
+    """Filter out icons, tracking pixels, tiny placeholders."""
+    if not src:
+        return False
+    low = src.lower()
+    skip = (
+        "pixel", "beacon", "track", "spacer", "blank", "logo", "icon",
+        "sprite", "1x1", "spinner", "loading", "placeholder",
+        "data:image", ".gif", "transparent", "arrow", "chevron",
+        "badge", "rating", "star", "banner",
+    )
+    return not any(s in low for s in skip)
+
+
+def _extract_image_from_html(soup: BeautifulSoup, page_url: str) -> str:
+    """Deep HTML fallback: site-specific selectors, then generic heuristics."""
+    host = (page_url or "").lower()
+
+    selectors: list[str] = []
+
+    if "amazon." in host:
+        selectors = [
+            "#imgTagWrapperId img",
+            "#landingImage",
+            "#main-image-container img",
+            "#imageBlock img",
+            "#ebooksImgBlkFront",
+            "img#imgBlkFront",
+            "[data-a-image-name='landingImage']",
+        ]
+    elif "walmart." in host:
+        selectors = [
+            "[data-testid='hero-image-container'] img",
+            ".prod-hero-image img",
+            "[data-testid='media-thumbnail'] img",
+            ".hover-zoom-hero-image img",
+        ]
+    elif "bestbuy." in host:
+        selectors = [
+            ".primary-image img",
+            ".shop-media-gallery img",
+            "[data-testid='image-media-container'] img",
+            ".picture-wrapper img",
+        ]
+    elif "target." in host:
+        selectors = [
+            "[data-test='product-image'] img",
+            "[data-test='product-detail'] img",
+            ".slideDeckPicture img",
+        ]
+    elif "ebay." in host:
+        selectors = [
+            "#icImg",
+            ".ux-image-carousel img",
+            "[data-testid='ux-image-carousel'] img",
+            ".img-transition-medium",
+        ]
+    elif "newegg." in host:
+        selectors = [
+            ".product-view-img-original",
+            ".swiper-slide img",
+            ".product-main-aside img",
+        ]
+
+    selectors += [
+        "[itemprop='image']",
+        "main img[src*='product']",
+        "main img[src*='item']",
+        "#product-image img",
+        ".product-image img",
+        ".product-img img",
+        ".pdp-image img",
+        ".gallery img",
+        "[data-component='image'] img",
+    ]
+
+    for sel in selectors:
+        try:
+            el = soup.select_one(sel)
+        except Exception:
+            continue
+        if not el:
+            continue
+        tag = el if el.name == "img" else el.find("img")
+        if not tag:
+            tag = el
+        src = (
+            tag.get("src")
+            or tag.get("data-src")
+            or tag.get("data-old-hires")
+            or tag.get("data-a-dynamic-image", "")
+        )
+        if isinstance(src, str) and "{" in src:
+            try:
+                img_dict = json.loads(src)
+                if isinstance(img_dict, dict) and img_dict:
+                    src = max(img_dict.keys(), key=lambda k: sum(img_dict.get(k, [0, 0])))
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+        resolved = _resolve_img_url(str(src or ""), page_url)
+        if resolved and _is_product_image(resolved):
+            return resolved
+
+    candidates: list[tuple[int, str]] = []
+    for img in soup.find_all("img", src=True):
+        src = str(img.get("src") or img.get("data-src") or "")
+        resolved = _resolve_img_url(src, page_url)
+        if not resolved or not _is_product_image(resolved):
+            continue
+        w = 0
+        try:
+            w = int(img.get("width") or 0)
+        except (ValueError, TypeError):
+            pass
+        h = 0
+        try:
+            h = int(img.get("height") or 0)
+        except (ValueError, TypeError):
+            pass
+        area = max(w, 1) * max(h, 1)
+        if w and w < 50:
+            continue
+        if h and h < 50:
+            continue
+        candidates.append((area, resolved))
+
+    if candidates:
+        candidates.sort(key=lambda x: -x[0])
+        return candidates[0][1]
+
     return ""
 
 
@@ -216,7 +366,8 @@ def _extract_from_item_list(obj: dict, page_url: str) -> list[ProductInfo]:
             info.currency = d.get("currency", "USD")
             info.brand = d.get("brand", "")
             info.description = d.get("description", "")
-            info.image_url = d.get("image_url", "")
+            raw_img = d.get("image_url", "")
+            info.image_url = _resolve_img_url(raw_img, page_url) if raw_img else ""
             info.seller = d.get("seller", "")
             info.platform = _platform_from_url(page_url)
             info.raw_fields = d.get("raw", {})
@@ -299,10 +450,11 @@ def extract_product(html: str, url: str = "") -> ProductInfo:
         if seller_meta and seller_meta.get("content"):
             info.seller = seller_meta.get("content", "").strip()
 
-    # IMPORTANT:
-    # Do not use plain-text regex price as final price, because it often matches
-    # unrelated amounts like gift-card promos, shipping thresholds, etc.
-    # Keep only structured sources (JSON-LD/meta) for price accuracy.
+    if info.image_url:
+        info.image_url = _resolve_img_url(info.image_url, url)
+    if not info.image_url or not _is_product_image(info.image_url):
+        info.image_url = _extract_image_from_html(soup, url)
+
     if info.price is None:
         body = soup.get_text()[:3000]
         p, c = _extract_price_from_text(body)
