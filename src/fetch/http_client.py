@@ -48,3 +48,29 @@ def fetch(url: str, headers: Optional[dict] = None) -> tuple[str | None, int | N
                 continue
             return None, getattr(e, "response", None) and e.response.status_code or None
     return None, None
+
+
+def fetch_image_bytes(url: str, max_bytes: int = 2_500_000) -> bytes | None:
+    """Fetch image bytes (for Streamlit rendering when hotlink fails)."""
+    _rate_limit()
+    hdrs = {
+        "User-Agent": UA,
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    try:
+        r = requests.get(url, headers=hdrs, timeout=TIMEOUT, stream=True)
+        r.raise_for_status()
+        chunks: list[bytes] = []
+        total = 0
+        for chunk in r.iter_content(chunk_size=65536):
+            if not chunk:
+                continue
+            total += len(chunk)
+            if total > max_bytes:
+                return None
+            chunks.append(chunk)
+        data = b"".join(chunks)
+        return data if len(data) > 64 else None
+    except requests.RequestException:
+        return None

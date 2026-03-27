@@ -3,18 +3,46 @@ import streamlit as st
 
 from src.cache.cache import get_cached, set_
 from src.extract.product_extractor import ProductInfo, extract_product, extract_products
-from src.fetch.http_client import fetch
+from src.fetch.http_client import fetch, fetch_image_bytes
 from src.match.intent import extract_intent
 from src.match.ranker import rank_products
 from src.reason.reason_builder import build_reasons
-from src.search.bing_scraper import search_product_urls, get_demo_results
+from src.search.bing_scraper import (
+    search_product_urls,
+    get_demo_results,
+    get_bing_thumbnail,
+    get_bing_title,
+    get_bing_snippet_price,
+)
 
 MAX_CANDIDATES = 12
 MAX_FINAL = 8
 
 
+def _is_bad_product_name(name: str) -> bool:
+    n = (name or "").strip().lower()
+    if not n:
+        return True
+    exact = {
+        "amazon.com", "www.amazon.com",
+        "walmart.com", "www.walmart.com",
+        "bestbuy.com", "www.bestbuy.com",
+        "target.com", "www.target.com",
+        "ebay.com", "www.ebay.com",
+    }
+    base = n.rstrip(".").replace("https://", "").replace("http://", "")
+    if base.split("/")[0] in exact or base in exact:
+        return True
+    sub = (
+        "robot check", "captcha", "are you a human", "access denied",
+        "page not found", "guided by", "sign in to", "error 503",
+    )
+    return any(s in n for s in sub)
+
+
 def _cached_fetch(url: str) -> str | None:
-    key = f"fetch:{url}"
+    # Cache version bump to avoid stale HTML from old (search/listing) URLs
+    key = f"v3:fetch:{url}"
     cached = get_cached(key)
     if cached is not None and isinstance(cached.get("html"), str):
         return cached["html"]
@@ -25,7 +53,8 @@ def _cached_fetch(url: str) -> str | None:
 
 
 def _cached_extract(html: str, url: str) -> list[ProductInfo]:
-    key = f"extract:{url}"
+    # Cache version bump to avoid stale extraction results
+    key = f"v3:extract:{url}"
     cached = get_cached(key)
     if cached is not None and isinstance(cached, dict) and (cached.get("name") or cached.get("url")):
         return [ProductInfo(
@@ -65,22 +94,34 @@ def run_pipeline(user_input: str) -> list[dict]:
         max_results=MAX_CANDIDATES,
     )
     _blocked = ("bing.com", "microsoft.com", "duckduckgo.com", "google.com", "yahoo.com")
-    _bad_names = ("guided by", "bing", "google", "search", "weather", "sign in", "login")
+
+    _search_page_markers = ("/s?", "/search?", "searchpage", "searchTerm=", "/sch/", "_nkw=")
 
     products: list[ProductInfo] = []
     for url in urls:
         if any(b in url.lower() for b in _blocked):
             continue
+        if any(m in url for m in _search_page_markers):
+            continue
         html = _cached_fetch(url)
-        if not html:
+        if not html or len(html) < 1200:
+            continue
+        low_html = html[:3000].lower()
+        if any(w in low_html for w in ("captcha", "robot check", "are you a human", "enable javascript", "sorry, we just need to make sure")):
             continue
         for info in _cached_extract(html, url):
             info.url = info.url or url
-            if any(b in url.lower() for b in _blocked):
-                continue
+            bt = get_bing_title(info.url)
+            if bt and (_is_bad_product_name(info.name) or len((info.name or "").strip()) < 8):
+                info.name = bt
+            bp = get_bing_snippet_price(info.url)
+            if bp is not None and info.price is None:
+                info.price = bp
+                info.currency = "USD"
+                info.price_source = "bing_snippet"
             if not info.name:
                 info.name = info.url.split("/")[-1][:80] or "Product"
-            if info.name and any(b in info.name.lower() for b in _bad_names):
+            if _is_bad_product_name(info.name):
                 continue
             products.append(info)
 
@@ -106,18 +147,23 @@ def run_pipeline(user_input: str) -> list[dict]:
         reasons = build_reasons(p, intent.keywords, intent.budget_min, intent.budget_max)
         price_display = None
         if p.price is not None:
-            approx = "~" if p.price_source in ("text_regex", "css_selector") else ""
+            approx = "~" if p.price_source in ("text_regex", "css_selector", "bing_snippet") else ""
             if p.currency == "USD":
                 price_display = f"{approx}${p.price:.2f}"
             else:
                 price_display = f"{approx}{p.currency} {p.price:.2f}"
         if p.price is None:
             price_display = "Price unavailable"
+
+        img = p.image_url
+        if not img or not img.startswith("http"):
+            img = get_bing_thumbnail(p.url)
+
         results.append({
             "name": p.name or "Unknown product",
             "price": price_display,
             "url": p.url,
-            "image_url": p.image_url,
+            "image_url": img,
             "platform": p.platform,
             "seller": p.seller,
             "reasons": [r["text"] for r in reasons],
@@ -472,10 +518,24 @@ def _platform_badge_html(platform: str) -> str:
     return f"<span class='badge badge-platform'>{platform}</span>"
 
 
+def _is_displayable_image(url: str) -> bool:
+    if not url or not url.startswith("http"):
+        return False
+    low = url.lower()
+    bad = (
+        "logo", "favicon", "sprite", "pixel", "blank", "transparent",
+        "placeholder", "icon", "avatar", "share-image", "social-image",
+        "images/S/", "images/G/", "nav-sprite", "loading",
+    )
+    return not any(p in low for p in bad)
+
+
 def _render_card(r: dict, idx: int) -> None:
     """Render a single product card using Streamlit native + HTML hybrid."""
     name = r.get("name") or "Unknown product"
     image_url = (r.get("image_url") or "").strip()
+    if not _is_displayable_image(image_url):
+        image_url = ""
     platform_text = (r.get("platform") or "").strip() or "Unknown"
     seller_text = (r.get("seller") or "").strip()
     price_raw = r.get("price") or ""
@@ -494,8 +554,20 @@ def _render_card(r: dict, idx: int) -> None:
             unsafe_allow_html=True,
         )
 
-        if image_url:
-            st.image(image_url, use_container_width=True)
+        if image_url and image_url.startswith("http"):
+            shown = False
+            try:
+                blob = fetch_image_bytes(image_url)
+                if blob:
+                    st.image(blob, use_container_width=True)
+                    shown = True
+            except Exception:
+                pass
+            if not shown:
+                try:
+                    st.image(image_url, use_container_width=True)
+                except Exception:
+                    pass
 
         st.markdown(
             f'<div class="card-title">{idx}. {_truncate(name, 72)}</div>',
