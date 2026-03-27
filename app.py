@@ -40,6 +40,21 @@ def _is_bad_product_name(name: str) -> bool:
     return any(s in n for s in sub)
 
 
+def _platform_from_result_url(url: str) -> str:
+    u = (url or "").lower()
+    if "amazon." in u:
+        return "Amazon"
+    if "walmart." in u:
+        return "Walmart"
+    if "bestbuy." in u:
+        return "Best Buy"
+    if "target." in u:
+        return "Target"
+    if "ebay." in u:
+        return "eBay"
+    return "Store"
+
+
 def _cached_fetch(url: str) -> str | None:
     # Cache version bump to avoid stale HTML from old (search/listing) URLs
     key = f"v3:fetch:{url}"
@@ -133,6 +148,30 @@ def run_pipeline(user_input: str) -> list[dict]:
             seen_urls.add(u)
             unique_products.append(p)
     products = unique_products
+
+    # Hard fallback: if target pages are blocked, build displayable cards from Bing result metadata.
+    if not products:
+        for url in urls:
+            if any(b in url.lower() for b in _blocked):
+                continue
+            if any(m in url for m in _search_page_markers):
+                continue
+            title = get_bing_title(url)
+            if not title or _is_bad_product_name(title):
+                continue
+            p = ProductInfo(
+                name=title,
+                url=url,
+                image_url=get_bing_thumbnail(url),
+                platform=_platform_from_result_url(url),
+                seller="",
+            )
+            bp = get_bing_snippet_price(url)
+            if bp is not None:
+                p.price = bp
+                p.currency = "USD"
+                p.price_source = "bing_snippet"
+            products.append(p)
 
     ranked = rank_products(
         products,
